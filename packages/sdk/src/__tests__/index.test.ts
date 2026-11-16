@@ -32,6 +32,7 @@ describe('init', () => {
         maxQueueSize: 10000,
         enabled: true,
         debug: false,
+        compress: false,
         sdkVersion: '0.1.0',
         ota: null,
       })

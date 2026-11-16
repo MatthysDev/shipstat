@@ -7,6 +7,7 @@ struct ShipstatConfig {
   var flushIntervalMs: Int
   var maxQueueSize: Int
   var debug: Bool
+  var compress: Bool
 }
 
 /// All state lives on `queue`. Public entry points only enqueue work and return.
@@ -41,6 +42,9 @@ final class ShipstatCore {
   private var nextAttemptAt = Date.distantPast
   private var timer: DispatchSourceTimer?
   private var flushWaiters: [() -> Void] = []
+  /// Events serialized but not yet on disk. Drained on the next turn of the queue, so a burst
+  /// of track() calls becomes one SQLite transaction instead of one per event.
+  private var writeBuffer: [String] = []
 
   private init() {
     queue.async { self.loadState() }
@@ -90,15 +94,10 @@ final class ShipstatCore {
         self.log("dropped event \(name): not serializable")
         return
       }
-      self.store.insert(body)
-      self.pending += 1
-      // Trim in chunks: once over the cap by 10 % (min 100), drop the oldest back to the cap.
-      let cap = self.config?.maxQueueSize ?? 10_000
-      if self.pending > cap + Swift.max(100, cap / 10) {
-        self.store.trim(to: cap)
-        self.pending = self.store.count()
+      self.writeBuffer.append(body)
+      if self.writeBuffer.count == 1 {
+        self.queue.async { self.drainWrites() }
       }
-      if self.pending >= (self.config?.flushAt ?? 50) { self.flushIfNeeded() }
     }
   }
 
@@ -129,6 +128,7 @@ final class ShipstatCore {
       self.enabled = value
       self.defaults.set(value, forKey: "enabled")
       if !value {
+        self.writeBuffer.removeAll()
         self.store.clear()
         self.pending = 0
       }
@@ -232,7 +232,24 @@ final class ShipstatCore {
     w.forEach { $0() }
   }
 
+  /// Writes buffered events in one transaction. `thenFlush` is false when called by a flush.
+  private func drainWrites(thenFlush: Bool = true) {
+    guard !writeBuffer.isEmpty else { return }
+    let batch = writeBuffer
+    writeBuffer.removeAll(keepingCapacity: true)
+    store.insert(batch)
+    pending += batch.count
+    // Trim in chunks: once over the cap by 10 % (min 100), drop the oldest back to the cap.
+    let cap = config?.maxQueueSize ?? 10_000
+    if pending > cap + Swift.max(100, cap / 10) {
+      store.trim(to: cap)
+      pending = store.count()
+    }
+    if thenFlush, pending >= (config?.flushAt ?? 50) { flushIfNeeded() }
+  }
+
   private func flushIfNeeded(any: Bool = false) {
+    drainWrites(thenFlush: false)
     guard enabled else {
       finishWaiters()
       return
@@ -256,7 +273,13 @@ final class ShipstatCore {
     req.httpMethod = "POST"
     req.setValue("application/json", forHTTPHeaderField: "Content-Type")
     cfg.headers.forEach { req.setValue($1, forHTTPHeaderField: $0) }
-    req.httpBody = body.data(using: .utf8)
+    let raw = Data(body.utf8)
+    if cfg.compress, let gz = Gzip.compress(raw) {
+      req.setValue("gzip", forHTTPHeaderField: "Content-Encoding")
+      req.httpBody = gz
+    } else {
+      req.httpBody = raw
+    }
     inFlight = true
     session.dataTask(with: req) { [weak self] _, response, error in
       guard let self = self else { return }

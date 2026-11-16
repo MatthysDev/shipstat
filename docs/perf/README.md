@@ -71,6 +71,17 @@ Cost of one call, in microseconds:
 - **The tail is where native pays off on iOS**: p99 1.4 µs against 45 µs. On Android the p99 (32 µs) is higher than on iOS: crossing JNI occasionally waits, and the emulator is noisy (the first Android run measured 3.1 µs at p50, later runs 1.0 µs). The worst single call on Android was 1.3 ms, once in 50 000.
 - **Frames:** on this machine, even 6 000 events per second do not drop frames for any subject. The difference shows on slower phones and in apps whose JS thread is already busy; this benchmark does not measure that.
 
+## Background work
+
+What happens off the JS thread matters for battery and data, even if it never blocks the UI.
+
+| Change | Measured |
+|---|---|
+| **Batched writes**: events that arrive while a write is pending share one SQLite transaction and one prepared statement | 10 000 events, WAL, `synchronous=FULL`, Apple M5 Pro SSD: **97.7 µs → 4.3 µs per event** (one transaction per event vs. per burst of 50) |
+| **`compress: true`**: each batch is gzipped (`Content-Encoding: gzip`) | A batch of 100 real events: **41.6 KB → 1.8 KB**. Real-world batches vary less than this sample; expect 10–20×. On localhost the network is free, so compression adds ≈ 0.4 s to send 5 000 events; on a mobile network, sending 20× fewer bytes is the cheaper side. Off by default because your endpoint must accept gzip (`shipstat-dashboard` does). |
+
+The JS-thread cost does not change with either: both run on the native background queue.
+
 ## Limits
 
 - Simulator and emulator on an Apple M5 Pro (48 GB, macOS 27.0.1), not physical phones. Absolute numbers will be higher on mid-range Android devices; the ratios are what to look at.

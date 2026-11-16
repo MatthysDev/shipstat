@@ -1,6 +1,5 @@
 package expo.modules.shipstat
 
-import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
@@ -19,8 +18,22 @@ internal class EventStore(context: Context) :
     db.enableWriteAheadLogging()
   }
 
-  fun insert(body: String) {
-    writableDatabase.insert("events", null, ContentValues().apply { put("body", body) })
+  /** One transaction and one compiled statement for the whole batch. */
+  fun insert(bodies: List<String>) {
+    if (bodies.isEmpty()) return
+    val db = writableDatabase
+    val stmt = db.compileStatement("INSERT INTO events (body) VALUES (?)")
+    db.beginTransaction()
+    try {
+      for (body in bodies) {
+        stmt.bindString(1, body)
+        stmt.executeInsert()
+      }
+      db.setTransactionSuccessful()
+    } finally {
+      db.endTransaction()
+      stmt.close()
+    }
   }
 
   fun count(): Int =

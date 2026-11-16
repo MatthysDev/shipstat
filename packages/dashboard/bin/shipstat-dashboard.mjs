@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import zlib from 'node:zlib';
 import { demoEvents } from './demo.mjs';
 
 const args = process.argv.slice(2);
@@ -77,11 +78,19 @@ const json = (res, status, body) => {
   res.end(body === undefined ? '' : JSON.stringify(body));
 };
 
+// Bodies may be gzipped (`init({ compress: true })` in the app).
 const readBody = (req) =>
   new Promise((resolve, reject) => {
     const chunks = [];
     req.on('data', (c) => chunks.push(c));
-    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    req.on('end', () => {
+      try {
+        const raw = Buffer.concat(chunks);
+        resolve((req.headers['content-encoding'] === 'gzip' ? zlib.gunzipSync(raw) : raw).toString('utf8'));
+      } catch (e) {
+        reject(e);
+      }
+    });
     req.on('error', reject);
   });
 
@@ -105,6 +114,7 @@ const server = http.createServer(async (req, res) => {
     try {
       batch = JSON.parse(await readBody(req));
     } catch {
+      // Invalid JSON or a corrupt gzip body.
       return json(res, 400, { error: 'invalid json' });
     }
     if (!Array.isArray(batch?.events)) return json(res, 400, { error: 'expected { events: [...] }' });

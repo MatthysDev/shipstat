@@ -10,7 +10,7 @@ const HOST = Platform.OS === 'android' ? '10.0.2.2' : '127.0.0.1';
 const SERVER = `http://${HOST}:8787`;
 const HEADERS: Record<string, string> = {};
 
-Shipstat.init({ endpoint: `${SERVER}/events`, headers: HEADERS, flushIntervalMs: 5000, debug: __DEV__ });
+Shipstat.init({ endpoint: `${SERVER}/events`, headers: HEADERS, flushIntervalMs: 5000, compress: true, debug: __DEV__ });
 NaiveSdk.init(`${SERVER}/events`);
 
 type Tab = 'demo' | 'perf';

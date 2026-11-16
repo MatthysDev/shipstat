@@ -2,6 +2,10 @@
 
 ## 0.1.0 (unreleased)
 
+- Writes are batched: a burst of `track()` calls becomes one SQLite transaction with a reused statement (≈ 23× less disk time per event in bursts).
+- `compress: true` gzips each batch (`Content-Encoding: gzip`), typically 10–20× fewer bytes on the network.
+- Opt-out deletes waiting events; NaN / Infinity in context are dropped instead of crashing; `track()` never throws.
+
 - First version: native event queue (SQLite) and batched uploads on iOS and Android.
 - `track`, `setContext`, `unsetContext`, `identify`, `setEnabled`, `reset`, `flush`, `getAnonId`.
 - Automatic context: app version, build, OTA update id, platform, OS version, device model, locale.

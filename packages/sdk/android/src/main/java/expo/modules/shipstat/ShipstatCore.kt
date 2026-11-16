@@ -16,6 +16,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
+import java.util.zip.GZIPOutputStream
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
@@ -27,6 +28,7 @@ internal data class ShipstatConfig(
   val flushIntervalMs: Long,
   val maxQueueSize: Int,
   val debug: Boolean,
+  val compress: Boolean,
 )
 
 /** All state is touched only on [executor]. Public entry points enqueue and return. */
@@ -59,6 +61,11 @@ internal class ShipstatCore private constructor(appContext: Context) {
   private var nextAttemptAt = 0L
   private var timer: ScheduledFuture<*>? = null
   private val flushWaiters = ArrayList<() -> Unit>()
+  /**
+   * Events serialized but not yet on disk. Drained on the next executor turn, so a burst of
+   * track() calls becomes one SQLite transaction instead of one per event.
+   */
+  private val writeBuffer = ArrayList<String>()
 
   init {
     autoContext = baseContext(appContext)
@@ -112,15 +119,8 @@ internal class ShipstatCore private constructor(appContext: Context) {
         .put("user_id", userId ?: JSONObject.NULL)
         .put("props", if (propsJson.isNullOrEmpty()) JSONObject() else JSONObject(propsJson))
         .put("context", ctx)
-      store.insert(event.toString())
-      pending += 1
-      // Trim in chunks: once over the cap by 10 % (min 100), drop the oldest back to the cap.
-      val maxSize = config?.maxQueueSize ?: 10_000
-      if (pending > maxSize + max(100, maxSize / 10)) {
-        store.trimTo(maxSize)
-        pending = store.count()
-      }
-      if (pending >= (config?.flushAt ?: 50)) flushIfNeeded()
+      writeBuffer.add(event.toString())
+      if (writeBuffer.size == 1) run { drainWrites() }
     } catch (e: Exception) {
       log("dropped event $name: ${e.message}")
     }
@@ -146,6 +146,7 @@ internal class ShipstatCore private constructor(appContext: Context) {
     enabled = value
     prefs.edit().putBoolean("enabled", value).apply()
     if (!value) {
+      writeBuffer.clear()
       store.clear()
       pending = 0
     }
@@ -189,7 +190,24 @@ internal class ShipstatCore private constructor(appContext: Context) {
     w.forEach { it() }
   }
 
+  /** Writes buffered events in one transaction. `thenFlush` is false when called by a flush. */
+  private fun drainWrites(thenFlush: Boolean = true) {
+    if (writeBuffer.isEmpty()) return
+    val batch = ArrayList(writeBuffer)
+    writeBuffer.clear()
+    store.insert(batch)
+    pending += batch.size
+    // Trim in chunks: once over the cap by 10 % (min 100), drop the oldest back to the cap.
+    val maxSize = config?.maxQueueSize ?: 10_000
+    if (pending > maxSize + max(100, maxSize / 10)) {
+      store.trimTo(maxSize)
+      pending = store.count()
+    }
+    if (thenFlush && pending >= (config?.flushAt ?: 50)) flushIfNeeded()
+  }
+
   private fun flushIfNeeded(any: Boolean = false) {
+    drainWrites(thenFlush = false)
     val cfg = config
     if (cfg == null || !enabled) { finishWaiters(); return }
     if (inFlight) return
@@ -217,7 +235,13 @@ internal class ShipstatCore private constructor(appContext: Context) {
         conn.doOutput = true
         conn.setRequestProperty("Content-Type", "application/json")
         cfg.headers.forEach { (k, v) -> conn.setRequestProperty(k, v) }
-        conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+        val bytes = body.toByteArray(Charsets.UTF_8)
+        if (cfg.compress) {
+          conn.setRequestProperty("Content-Encoding", "gzip")
+          conn.outputStream.use { out -> GZIPOutputStream(out).use { it.write(bytes) } }
+        } else {
+          conn.outputStream.use { it.write(bytes) }
+        }
         status = conn.responseCode
         retryAfter = conn.getHeaderField("Retry-After")?.toDoubleOrNull()
         (if (status >= 400) conn.errorStream else conn.inputStream)?.close()

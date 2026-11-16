@@ -30,12 +30,19 @@ final class EventStore {
     sqlite3_exec(db, sql, nil, nil, nil) == SQLITE_OK
   }
 
-  func insert(_ body: String) {
+  /// One transaction and one prepared statement for the whole batch.
+  func insert(_ bodies: [String]) {
+    guard !bodies.isEmpty else { return }
     var stmt: OpaquePointer?
     guard sqlite3_prepare_v2(db, "INSERT INTO events (body) VALUES (?);", -1, &stmt, nil) == SQLITE_OK else { return }
-    sqlite3_bind_text(stmt, 1, body, -1, SQLITE_TRANSIENT)
-    sqlite3_step(stmt)
-    sqlite3_finalize(stmt)
+    defer { sqlite3_finalize(stmt) }
+    exec("BEGIN;")
+    for body in bodies {
+      sqlite3_bind_text(stmt, 1, body, -1, SQLITE_TRANSIENT)
+      sqlite3_step(stmt)
+      sqlite3_reset(stmt)
+    }
+    exec("COMMIT;")
   }
 
   func count() -> Int {

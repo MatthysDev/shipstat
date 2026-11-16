@@ -8,6 +8,7 @@ export type NativeConfig = {
   maxQueueSize: number;
   enabled: boolean;
   debug: boolean;
+  compress: boolean;
   sdkVersion: string;
   ota: string | null;
 };

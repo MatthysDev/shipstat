@@ -68,13 +68,28 @@ export function WidgetView({ w, version, height = 220 }: { w: Widget; version: n
             <li key={r.id}>
               <time className="mono">{r.ts.toLocaleTimeString('en-GB')}</time>
               <code className="feed-name">{r.name}</code>
-              <span className="feed-tags mono">{[r.variant && `variant ${r.variant}`, r.app_version, r.platform].filter(Boolean).join(' · ')}</span>
-              <span className="feed-props mono">{r.props === '{}' ? '' : r.props}</span>
+              <span className="feed-tags">{[r.variant && `variant ${r.variant}`, r.app_version && `v${r.app_version}`, r.platform].filter(Boolean).join(' · ')}</span>
+              <span className="feed-props">{propChips(r.props)}</span>
             </li>
           ))}
         </ul>
       );
   }
+}
+
+/** `{"plan":"yearly","price":59.99}` → small "plan yearly" chips. */
+function propChips(json: string) {
+  let props: Record<string, unknown> = {};
+  try {
+    props = JSON.parse(json) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+  return Object.entries(props).map(([k, v]) => (
+    <span key={k} className="prop">
+      <span>{k}</span> {String(v)}
+    </span>
+  ));
 }
 
 async function load(w: Widget) {

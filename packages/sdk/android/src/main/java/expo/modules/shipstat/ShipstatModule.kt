@@ -22,6 +22,7 @@ class ShipstatModule : Module() {
         flushIntervalMs = (cfg["flushIntervalMs"] as? Number)?.toLong() ?: 10_000L,
         maxQueueSize = (cfg["maxQueueSize"] as? Number)?.toInt() ?: 10_000,
         debug = cfg["debug"] as? Boolean ?: false,
+        compress = cfg["compress"] as? Boolean ?: false,
       )
       val extra = buildMap {
         (cfg["sdkVersion"] as? String)?.takeIf { it.isNotEmpty() }?.let { put("sdk_version", it) }

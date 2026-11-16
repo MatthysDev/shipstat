@@ -44,6 +44,7 @@ export function normalizeConfig(config: ShipstatConfig) {
     maxQueueSize: pos(config.maxQueueSize, 10_000),
     enabled: config.enabled ?? true,
     debug: config.debug ?? false,
+    compress: config.compress ?? false,
   };
 }
 

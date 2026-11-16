@@ -13,7 +13,8 @@ public class ShipstatModule: Module {
         flushAt: (cfg["flushAt"] as? NSNumber)?.intValue ?? 50,
         flushIntervalMs: (cfg["flushIntervalMs"] as? NSNumber)?.intValue ?? 10_000,
         maxQueueSize: (cfg["maxQueueSize"] as? NSNumber)?.intValue ?? 10_000,
-        debug: cfg["debug"] as? Bool ?? false
+        debug: cfg["debug"] as? Bool ?? false,
+        compress: cfg["compress"] as? Bool ?? false
       )
       var extra: [String: Any] = [:]
       if let sdk = cfg["sdkVersion"] as? String, !sdk.isEmpty { extra["sdk_version"] = sdk }

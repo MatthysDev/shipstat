@@ -21,4 +21,9 @@ export interface ShipstatConfig {
   enabled?: boolean;
   /** Native logs. Default false. */
   debug?: boolean;
+  /**
+   * Gzip each batch (`Content-Encoding: gzip`): typically 10–20× fewer bytes on the network.
+   * Your endpoint must accept gzip bodies (shipstat-dashboard does). Default false.
+   */
+  compress?: boolean;
 }
