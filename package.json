@@ -1,0 +1,9 @@
+{
+  "name": "shipstat-monorepo",
+  "private": true,
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test"
+  },
+  "packageManager": "pnpm@12.16.1"
+}

@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["ShipstatModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.shipstat.ShipstatModule"]
+  }
+}
