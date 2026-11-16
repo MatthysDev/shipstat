@@ -6,3 +6,5 @@ dist/
 .DS_Store
 apps/example/ios/
 apps/example/android/
+
+apps/site/dist/

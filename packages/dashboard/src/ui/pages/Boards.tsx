@@ -146,6 +146,7 @@ export function Boards({ id, version }: { id?: string; version: number }) {
 }
 
 function describe(w: Widget): string {
+  if (w.viz === 'feed') return [w.event ?? 'all events', 'newest first'].join(' · ');
   const what = w.viz === 'funnel' ? (w.steps ?? []).filter(Boolean).join(' → ') : w.event ?? 'all events';
   const metric = { events: 'events', users: 'users', per_user: 'events / user' }[w.metric];
   const filters = Object.entries(w.filters).filter(([, v]) => v).map(([k, v]) => `${k}=${v}`);

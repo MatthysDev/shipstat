@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { restoreCache, saveCache } from '../data/cache';
-import { countEvents, stitchIdentities } from '../data/db';
+import { countEvents, insertEvents, stitchIdentities } from '../data/db';
+import { demoEvents } from '../lib/demo';
 import { readServerConfig, startLive } from '../data/live';
 import { syncApi, type ApiSource } from '../data/sources';
 import type { Filters, Range } from '../data/sql';
@@ -82,6 +83,14 @@ export default function App() {
     (async () => {
       const meta = await restoreCache();
       if (meta) await refresh(meta.source, new Date(meta.savedAt));
+      // `?demo`: the hosted demo opens straight on sample data.
+      if (new URLSearchParams(location.search).has('demo') && (await countEvents()) === 0) {
+        setBooting('Generating demo data…');
+        await insertEvents(demoEvents());
+        await stitchIdentities();
+        await refresh('demo data');
+        await saveCache('demo data');
+      }
       const server = await readServerConfig();
       if (server) {
         const label = server.name ?? location.host;

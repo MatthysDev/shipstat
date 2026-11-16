@@ -1,7 +1,7 @@
 import type { Filters, Metric, Range } from '../data/sql';
 import { isArray, readJson, writeJson } from './storage';
 
-export type Viz = 'line' | 'bar' | 'number' | 'pie' | 'table' | 'funnel';
+export type Viz = 'line' | 'bar' | 'number' | 'pie' | 'table' | 'funnel' | 'feed';
 
 export const VIZ_LABELS: Record<Viz, string> = {
   line: 'Line',
@@ -10,6 +10,7 @@ export const VIZ_LABELS: Record<Viz, string> = {
   pie: 'Donut',
   table: 'Table',
   funnel: 'Funnel',
+  feed: 'Live feed',
 };
 
 export const METRIC_LABELS: Record<Metric, string> = {
@@ -86,6 +87,7 @@ export function starterBoard(events: string[]): Board {
       w({ title: 'Top events', viz: 'table', split: 'name' }),
       w({ title: 'Active users per day by variant', viz: 'line', split: 'variant', metric: 'users', size: 2 }),
       w({ title: 'Locales', viz: 'pie', split: 'locale', metric: 'users' }),
+      w({ title: 'Latest events', viz: 'feed', size: 3 }),
     ],
   };
 }

@@ -68,7 +68,7 @@ function Demo() {
       />
 
       <View style={styles.log}>
-        {log.map((l, i) => <Text key={i} style={styles.logLine}>{l}</Text>)}
+        {log.map((l, i) => <Text key={i} style={[styles.logLine, i === 0 && { color: INK }]}>{l}</Text>)}
       </View>
     </ScrollView>
   );
@@ -133,31 +133,33 @@ function TabButton({ id, label, on, onPress }: { id: string; label: string; on: 
 }
 
 const mono = Platform.select({ ios: 'Menlo', default: 'monospace' });
+const INK = '#0a0a0a';
+const ACCENT = '#f2542d';
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#f6f6f4', paddingTop: 64 },
-  tabs: { flexDirection: 'row', marginHorizontal: 24, backgroundColor: '#e9e8e4', borderRadius: 10, padding: 3 },
-  tab: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center' },
-  tabOn: { backgroundColor: '#fff' },
-  tabText: { color: '#62626b', fontWeight: '600' },
-  tabTextOn: { color: '#18181b' },
+  screen: { flex: 1, backgroundColor: '#ffffff', paddingTop: 64 },
+  tabs: { flexDirection: 'row', marginHorizontal: 24, borderWidth: 1, borderColor: '#e9e9e9', borderRadius: 8, padding: 3 },
+  tab: { flex: 1, paddingVertical: 8, borderRadius: 6, alignItems: 'center' },
+  tabOn: { backgroundColor: INK },
+  tabText: { color: '#666666', fontWeight: '500' },
+  tabTextOn: { color: '#ffffff' },
   body: { padding: 24, gap: 10 },
-  title: { fontSize: 28, fontWeight: '700', color: '#18181b' },
-  muted: { color: '#62626b', fontSize: 12 },
-  label: { fontWeight: '600', color: '#18181b', marginRight: 6 },
-  variantRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginVertical: 6 },
-  pill: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: '#d4d4d8' },
-  pillOn: { backgroundColor: '#4f46e5', borderColor: '#4f46e5' },
-  pillText: { fontWeight: '600', color: '#18181b' },
-  pillTextOn: { color: '#fff' },
-  btn: { backgroundColor: '#4f46e5', padding: 14, borderRadius: 10 },
-  btnSecondary: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e6e5e1' },
-  btnText: { color: '#fff', fontWeight: '600', textAlign: 'center', fontFamily: mono },
-  btnTextSecondary: { color: '#18181b' },
-  log: { marginTop: 8, gap: 4 },
-  logLine: { fontFamily: mono, fontSize: 12, color: '#18181b' },
-  section: { marginTop: 14, fontWeight: '700', color: '#18181b' },
-  row: { flexDirection: 'row', borderBottomWidth: StyleSheet.hairlineWidth, borderColor: '#d4d4d8', paddingVertical: 5 },
-  cell: { flex: 1, textAlign: 'right', fontFamily: mono, fontSize: 12, color: '#18181b' },
+  title: { fontSize: 30, fontWeight: '600', letterSpacing: -0.8, color: INK },
+  muted: { color: '#999999', fontSize: 11, fontFamily: mono },
+  label: { fontWeight: '500', color: INK, marginRight: 6 },
+  variantRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginVertical: 8 },
+  pill: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: '#e0e0e0' },
+  pillOn: { backgroundColor: ACCENT, borderColor: ACCENT },
+  pillText: { fontWeight: '600', color: INK },
+  pillTextOn: { color: '#ffffff' },
+  btn: { backgroundColor: INK, paddingVertical: 15, paddingHorizontal: 16, borderRadius: 8 },
+  btnSecondary: { backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#e9e9e9' },
+  btnText: { color: '#ffffff', fontWeight: '500', textAlign: 'left', fontFamily: mono, fontSize: 13 },
+  btnTextSecondary: { color: INK },
+  log: { marginTop: 10, gap: 6, borderTopWidth: 1, borderColor: '#f0f0f0', paddingTop: 12 },
+  logLine: { fontFamily: mono, fontSize: 12, color: '#666666' },
+  section: { marginTop: 16, fontWeight: '600', color: INK },
+  row: { flexDirection: 'row', borderBottomWidth: StyleSheet.hairlineWidth, borderColor: '#e0e0e0', paddingVertical: 6 },
+  cell: { flex: 1, textAlign: 'right', fontFamily: mono, fontSize: 12, color: INK },
   cellFirst: { flex: 1.4, textAlign: 'left' },
-  cellHead: { color: '#8d8d96' },
+  cellHead: { color: '#999999' },
 });

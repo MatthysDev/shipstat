@@ -12,6 +12,7 @@ const VIZ_HELP: Record<Viz, string> = {
   pie: 'Share of each value of the split.',
   table: 'Ranked values of the split.',
   funnel: 'Users who do each step after the previous one.',
+  feed: 'The newest events as they arrive. Best with live mode.',
 };
 
 /** Side-by-side form and live preview. */
@@ -62,14 +63,14 @@ export function WidgetEditor({ value, version, onSave, onCancel }: { value: Widg
         )}
 
         <div className="form-grid two-col">
-          {w.viz !== 'funnel' && (
+          {w.viz !== 'funnel' && w.viz !== 'feed' && (
             <label className="field">Measure
               <select className="input" value={w.metric} onChange={(e) => set({ metric: e.target.value as Metric })}>
                 {(Object.keys(METRIC_LABELS) as Metric[]).map((m) => <option key={m} value={m}>{METRIC_LABELS[m]}</option>)}
               </select>
             </label>
           )}
-          {w.viz !== 'number' && (
+          {w.viz !== 'number' && w.viz !== 'feed' && (
             <label className="field">Split by
               <select className="input" value={w.split ?? ''} onChange={(e) => set({ split: e.target.value || undefined })}>
                 <option value="">{w.viz === 'pie' || w.viz === 'table' ? 'Event name' : 'No split'}</option>

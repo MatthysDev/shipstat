@@ -15,6 +15,7 @@ export function fmtPct(x: number, digits = 1): string {
 }
 
 export function fmtSignedPct(x: number, digits = 0): string {
+  if (Math.abs(x * 100) < 0.5 * Math.pow(10, -digits)) return (0).toFixed(digits) + ' %';
   const v = (x * 100).toFixed(digits);
   return (x > 0 ? '+' : x < 0 ? '−' : '') + v.replace('-', '') + ' %';
 }

@@ -1,4 +1,4 @@
-import { breakdown, funnel, series, total } from '../../data/queries';
+import { breakdown, feed, funnel, series, total } from '../../data/queries';
 import { period } from '../../data/sql';
 import type { Widget } from '../../lib/boards';
 import { fmtChange, fmtCompact, fmtInt } from '../../lib/format';
@@ -61,6 +61,19 @@ export function WidgetView({ w, version, height = 220 }: { w: Widget; version: n
     }
     case 'funnel':
       return d.steps.length < 2 ? <p className="muted">Pick at least two steps.</p> : <Funnel steps={d.steps} data={d.data} />;
+    case 'feed':
+      return (
+        <ul className="feed">
+          {d.rows.map((r) => (
+            <li key={r.id}>
+              <time className="mono">{r.ts.toLocaleTimeString('en-GB')}</time>
+              <code className="feed-name">{r.name}</code>
+              <span className="feed-tags mono">{[r.variant && `variant ${r.variant}`, r.app_version, r.platform].filter(Boolean).join(' · ')}</span>
+              <span className="feed-props mono">{r.props === '{}' ? '' : r.props}</span>
+            </li>
+          ))}
+        </ul>
+      );
   }
 }
 
@@ -82,5 +95,7 @@ async function load(w: Widget) {
       const steps = (w.steps ?? []).filter(Boolean);
       return { kind: 'funnel' as const, steps, data: steps.length >= 2 ? await funnel(p, w.filters, steps, w.split) : [] };
     }
+    case 'feed':
+      return { kind: 'feed' as const, rows: await feed(w.filters, w.event) };
   }
 }

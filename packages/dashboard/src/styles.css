@@ -192,7 +192,8 @@ pre.code { margin: 0; background: #0a0a0a; color: #e6e6e6; border: 1px solid var
 .span-1 { grid-column: span 1; }
 .span-2 { grid-column: span 2; }
 .span-3 { grid-column: span 3; }
-.widget-tools { display: flex; gap: 2px; opacity: 0; transition: opacity .15s; }
+.widget { position: relative; }
+.widget-tools { position: absolute; top: 12px; right: 12px; display: flex; gap: 2px; padding: 2px; border-radius: 6px; background: var(--surface); box-shadow: 0 0 0 1px var(--line); opacity: 0; transition: opacity .15s; }
 .widget:hover .widget-tools, .widget:focus-within .widget-tools { opacity: 1; }
 .widget-tools button { all: unset; cursor: pointer; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 6px; color: var(--muted); font-size: 13px; }
 .widget-tools button:hover { background: var(--line-soft); color: var(--text); }
@@ -218,6 +219,16 @@ pre.code { margin: 0; background: #0a0a0a; color: #e6e6e6; border: 1px solid var
 .funnel-track { height: 18px; background: var(--line-soft); border-radius: 3px; overflow: hidden; }
 .funnel-bar { height: 100%; border-radius: 3px; min-width: 2px; }
 .funnel-num { font: 12px var(--mono); white-space: nowrap; }
+
+/* ===== Live feed ===== */
+.feed { list-style: none; margin: 0; padding: 0; }
+.feed li { display: grid; grid-template-columns: 76px minmax(120px, 180px) minmax(160px, 260px) 1fr; gap: 14px; align-items: baseline; padding: 8px 0; border-bottom: 1px solid var(--line-soft); animation: feed-in .5s ease-out; }
+.feed li:last-child { border-bottom: 0; }
+.feed time { color: var(--faint); font-size: 11.5px; }
+.feed-name { font-size: 12.5px; }
+.feed li:first-child .feed-name { color: var(--accent); }
+.feed-tags, .feed-props { color: var(--faint); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@keyframes feed-in { from { opacity: 0; transform: translateY(-4px); background: var(--accent-soft); } }
 
 /* ===== A/B tests ===== */
 .verdict { display: flex; gap: 14px; align-items: flex-start; border-radius: var(--radius); padding: 16px 20px; margin-bottom: 16px; border: 1px solid var(--line); border-left: 3px solid var(--faint); }

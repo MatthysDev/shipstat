@@ -150,3 +150,24 @@ export async function funnel(p: Period, f: Filters, steps: string[], splitKey?: 
   const rows = await query<{ step: number; name: string; grp: string; users: number }>(`WITH ${ctes.join(',\n')} SELECT * FROM (${counts}) ORDER BY grp, step`);
   return rows.map((r) => ({ step: r.step, name: r.name, group: r.grp, users: r.users }));
 }
+
+export interface FeedRow {
+  id: string;
+  ts: Date;
+  name: string;
+  props: string;
+  variant: string | null;
+  app_version: string | null;
+  platform: string | null;
+}
+
+/** Newest events first, for the live feed. */
+export async function feed(f: Filters, event?: string, limit = 12): Promise<FeedRow[]> {
+  const parts = ['TRUE'];
+  if (event) parts.push(`name = ${lit(event)}`);
+  for (const k of ['app_version', 'platform', 'variant', 'feature'] as const) if (f[k]) parts.push(`${k} = ${lit(f[k]!)}`);
+  const rows = await query<FeedRow>(`
+    SELECT id, ts, name, CAST(props AS VARCHAR) props, variant, app_version, platform
+    FROM events WHERE ${parts.join(' AND ')} ORDER BY ts DESC LIMIT ${limit}`);
+  return rows.map((r) => ({ ...r, ts: new Date(r.ts) }));
+}

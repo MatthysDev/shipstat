@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shipstat · Open source analytics & A/B testing for React Native and Expo</title>
+<meta name="description" content="Track the events you choose from React Native and Expo apps. Compare every release and every variant. Native module, about 1 µs per call. Your data stays on your API; the dashboard runs in your browser.">
+<meta property="og:title" content="Shipstat · Analytics for what you ship">
+<meta property="og:description" content="Open source analytics & A/B testing for React Native and Expo.">
+<meta property="og:image" content="assets/og.png">
+<meta name="theme-color" content="#ffffff">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;450;500;600&family=Geist+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<header class="nav wrap">
+  <a class="logo" href="#top" aria-label="Shipstat">
+    <span class="mark"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><rect x="1" y="6" width="2.4" height="5" rx=".6" fill="currentColor"/><rect x="4.8" y="3.5" width="2.4" height="7.5" rx=".6" fill="currentColor"/><rect x="8.6" y="1" width="2.4" height="10" rx=".6" fill="currentColor"/></svg></span>
+    Shipstat
+  </a>
+  <nav>
+    <a href="#setup">Setup</a>
+    <a href="#examples">Examples</a>
+    <a href="#performance">Performance</a>
+    <a href="https://github.com/MatthysDev/shipstat">GitHub</a>
+  </nav>
+  <a class="btn dark" href="demo/?demo">Live demo</a>
+</header>
+
+<main id="top">
+  <section class="hero wrap">
+    <p class="eyebrow">Open source · MIT · React Native &amp; Expo</p>
+    <h1>Know if what you shipped<br><span class="ink">works better.</span></h1>
+    <p class="lead">Track the events you choose. Every event knows its app version and variant, so any number splits by release. Your data goes to your API; the dashboard runs in your browser.</p>
+    <div class="cta">
+      <button class="install" type="button" data-copy="npx expo install shipstat"><span class="prompt">$</span> npx expo install shipstat <span class="copy">Copy</span></button>
+      <a class="btn dark" href="demo/?demo">Open the live demo</a>
+      <a class="btn" href="https://github.com/MatthysDev/shipstat">Read the code</a>
+    </div>
+    <figure class="frame hero-media">
+      <video src="assets/promo.mp4" poster="assets/promo-poster.jpg" autoplay muted loop playsinline></video>
+    </figure>
+    <p class="caption">A tap in the app, the event on the dashboard: real recording, iOS simulator and the local dashboard in live mode.</p>
+  </section>
+
+  <section class="facts wrap">
+    <div><b>≈ 1 µs</b><span>per <code>track()</code> on the JS thread</span></div>
+    <div><b>0</b><span>events captured that you did not send</span></div>
+    <div><b>Every release</b><span>version, build and OTA update on each event</span></div>
+    <div><b>Your API</b><span>JSON batches to the endpoint you choose</span></div>
+  </section>
+
+  <section id="setup" class="wrap section">
+    <p class="eyebrow">Setup</p>
+    <h2>Running in three steps.</h2>
+    <ol class="steps">
+      <li>
+        <span class="num">01</span>
+        <h3>Install the module</h3>
+        <p>A native Expo module: Swift on iOS, Kotlin on Android. Works in development builds and bare React Native.</p>
+        <pre><code>npx expo install shipstat</code></pre>
+      </li>
+      <li>
+        <span class="num">02</span>
+        <h3>Track what matters</h3>
+        <p>Set context once, it is added to every event. The rest is automatic.</p>
+<pre><code><span class="k">import</span> Shipstat <span class="k">from</span> <span class="s">'shipstat'</span>;
+
+Shipstat.<span class="f">init</span>({
+  endpoint: <span class="s">'http://localhost:8787/events'</span>,
+});
+Shipstat.<span class="f">setContext</span>({ variant: <span class="s">'B'</span> });
+Shipstat.<span class="f">track</span>(<span class="s">'paywall_viewed'</span>);</code></pre>
+      </li>
+      <li>
+        <span class="num">03</span>
+        <h3>Open the dashboard</h3>
+        <p>One command receives events, stores them in a file and serves the dashboard, live.</p>
+        <pre><code>npx shipstat-dashboard
+<span class="c">→ http://localhost:8787</span></code></pre>
+      </li>
+    </ol>
+    <p class="note">In production, point <code>endpoint</code> at your own API. The <a href="https://github.com/MatthysDev/shipstat#event-format">event format</a> is one documented JSON batch.</p>
+  </section>
+
+  <section id="examples" class="wrap section">
+    <p class="eyebrow">Examples</p>
+    <h2>Three questions, a few lines each.</h2>
+
+    <div class="example">
+      <div class="example-text">
+        <h3>Does the new paywall convert better?</h3>
+        <p>Set the variant, track the exposure and the goal. The dashboard gives the probability that B beats A, the uplift with its interval, and the same answer per app version.</p>
+<pre><code>Shipstat.<span class="f">setContext</span>({ variant: user.bucket });
+Shipstat.<span class="f">track</span>(<span class="s">'paywall_viewed'</span>);
+<span class="c">// later</span>
+Shipstat.<span class="f">track</span>(<span class="s">'purchase_done'</span>, { plan: <span class="s">'yearly'</span> });</code></pre>
+      </div>
+      <picture class="frame">
+        <source srcset="assets/ab-dark.png" media="(prefers-color-scheme: dark)">
+        <img src="assets/ab-light.png" alt="A/B test: probability that B beats A, uplift and per-version table" loading="lazy">
+      </picture>
+    </div>
+
+    <div class="example">
+      <div class="example-text">
+        <h3>Did 2.3 change how people use the app?</h3>
+        <p>Nothing to add: app version, build and OTA update ride on every event. Split any event by release, platform or your own properties.</p>
+<pre><code>Shipstat.<span class="f">track</span>(<span class="s">'workout_started'</span>, {
+  program: <span class="s">'strength'</span>,
+  source: <span class="s">'home'</span>,
+});</code></pre>
+      </div>
+      <picture class="frame">
+        <source srcset="assets/event-dark.png" media="(prefers-color-scheme: dark)">
+        <img src="assets/event-light.png" alt="An event split by app version" loading="lazy">
+      </picture>
+    </div>
+
+    <div class="example">
+      <div class="example-text">
+        <h3>Where do people drop?</h3>
+        <p>Build the board you need: lines, bars, numbers, donuts, tables, funnels, a live feed. Each chart is a query you configure, previewed as you edit, exportable as JSON.</p>
+<pre><code>Shipstat.<span class="f">track</span>(<span class="s">'app_opened'</span>);
+Shipstat.<span class="f">track</span>(<span class="s">'paywall_viewed'</span>);
+Shipstat.<span class="f">track</span>(<span class="s">'purchase_done'</span>);</code></pre>
+      </div>
+      <picture class="frame">
+        <source srcset="assets/editor-dark.png" media="(prefers-color-scheme: dark)">
+        <img src="assets/editor-light.png" alt="Chart editor building a funnel split by variant" loading="lazy">
+      </picture>
+    </div>
+  </section>
+
+  <section class="wrap section">
+    <p class="eyebrow">Where the data goes</p>
+    <h2>Nowhere you did not choose.</h2>
+    <div class="flow">
+      <div><span class="mono">Your app</span><p>Events are written to SQLite and sent in batches in the background. Offline-safe.</p></div>
+      <div class="arrow">→</div>
+      <div><span class="mono">Your API</span><p>Any backend that accepts a JSON POST, or <code>npx shipstat-dashboard</code> to start.</p></div>
+      <div class="arrow">→</div>
+      <div><span class="mono">Your browser</span><p>The dashboard loads events and queries them with DuckDB. No analytics server to run or pay for.</p></div>
+    </div>
+  </section>
+
+  <section id="performance" class="wrap section">
+    <p class="eyebrow">Performance</p>
+    <h2>Measured, not promised.</h2>
+    <div class="numbers">
+      <div><b>0.9 µs</b><span>median <code>track()</code> cost, iOS release build</span></div>
+      <div><b>6×</b><span>cheaper than a minimal pure-JS analytics client</span></div>
+      <div><b>0.27 s</b><span>for 5 000 events to reach the server</span></div>
+    </div>
+    <p class="note">10 000 calls timed one by one, median of several runs, on the iOS simulator and the Android emulator. Method, raw data and recordings in the <a href="https://github.com/MatthysDev/shipstat/tree/main/docs/perf">performance study</a>.</p>
+  </section>
+
+  <section class="wrap section faq">
+    <p class="eyebrow">Questions</p>
+    <h2>Before you install.</h2>
+    <details><summary>Does it work in Expo Go?</summary><p>No. It is a native module, so it needs a development build (<code>npx expo run:ios</code>) or a bare React Native app.</p></details>
+    <details><summary>What is collected automatically?</summary><p>Only context on the events you send: app version, build, OTA update id, platform, OS version, device model, locale. No screens, no taps, no IP address, no advertising id.</p></details>
+    <details><summary>What do I need in production?</summary><p>An endpoint that accepts <code>POST</code> JSON batches and stores them, and a read route the dashboard can page through. Supabase or a few lines of Node and Postgres are enough.</p></details>
+    <details><summary>How big can the data get?</summary><p>The dashboard handles millions of events in the browser. Past a few tens of millions, query your store directly; the format is plain JSON.</p></details>
+    <details><summary>Can users opt out?</summary><p><code>Shipstat.setEnabled(false)</code> deletes events waiting on the device and stops tracking until re-enabled. The choice persists.</p></details>
+  </section>
+
+  <section class="wrap end">
+    <h2>Ship, then know.</h2>
+    <div class="cta">
+      <button class="install" type="button" data-copy="npx expo install shipstat"><span class="prompt">$</span> npx expo install shipstat <span class="copy">Copy</span></button>
+      <a class="btn dark" href="demo/?demo">Open the live demo</a>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap footer">
+  <span>Shipstat · MIT</span>
+  <a href="https://github.com/MatthysDev/shipstat">GitHub</a>
+</footer>
+
+<script>
+  for (const b of document.querySelectorAll('[data-copy]')) {
+    b.addEventListener('click', async () => {
+      await navigator.clipboard.writeText(b.dataset.copy);
+      const label = b.querySelector('.copy');
+      label.textContent = 'Copied';
+      setTimeout(() => (label.textContent = 'Copy'), 1400);
+    });
+  }
+</script>
+</body>
+</html>
