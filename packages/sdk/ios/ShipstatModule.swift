@@ -72,9 +72,11 @@ public class ShipstatModule: Module {
     let v = ProcessInfo.processInfo.operatingSystemVersion
     var sys = utsname()
     uname(&sys)
-    let model = withUnsafePointer(to: &sys.machine) {
+    let machine = withUnsafePointer(to: &sys.machine) {
       $0.withMemoryRebound(to: CChar.self, capacity: 1) { String(cString: $0) }
     }
+    // On the simulator `machine` is the host arch; the simulated model is in the environment.
+    let model = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"] ?? machine
     var ctx: [String: Any] = [
       "app_version": info["CFBundleShortVersionString"] as? String ?? "",
       "build": info["CFBundleVersion"] as? String ?? "",

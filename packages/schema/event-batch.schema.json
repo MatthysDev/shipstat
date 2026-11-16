@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/MatthysDev/shipstat/packages/schema/event-batch.schema.json",
+  "title": "Shipstat event batch",
+  "type": "object",
+  "required": ["schema", "sent_at", "events"],
+  "properties": {
+    "schema": { "const": 1 },
+    "sent_at": { "type": "string", "format": "date-time" },
+    "events": { "type": "array", "items": { "$ref": "#/$defs/event" } }
+  },
+  "$defs": {
+    "primitive": { "type": ["string", "number", "boolean", "null"] },
+    "event": {
+      "type": "object",
+      "required": ["id", "name", "ts", "anon_id", "user_id", "props", "context"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "ts": { "type": "string", "format": "date-time" },
+        "anon_id": { "type": "string" },
+        "user_id": { "type": ["string", "null"] },
+        "props": {
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [{ "$ref": "#/$defs/primitive" }, { "type": "array", "items": { "$ref": "#/$defs/primitive" } }]
+          }
+        },
+        "context": {
+          "type": "object",
+          "properties": {
+            "app_version": { "type": "string" },
+            "build": { "type": "string" },
+            "ota": { "type": "string" },
+            "platform": { "enum": ["ios", "android"] },
+            "os_version": { "type": "string" },
+            "device_model": { "type": "string" },
+            "locale": { "type": "string" },
+            "sdk_version": { "type": "string" }
+          },
+          "additionalProperties": { "$ref": "#/$defs/primitive" }
+        }
+      }
+    }
+  }
+}

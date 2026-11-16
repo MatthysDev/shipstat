@@ -1,0 +1,11 @@
+{
+  "name": "@shipstat/schema",
+  "version": "0.1.0",
+  "description": "Shipstat event format: TypeScript types and JSON Schema",
+  "license": "MIT",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "files": ["src", "event-batch.schema.json"],
+  "repository": "https://github.com/MatthysDev/shipstat"
+}
