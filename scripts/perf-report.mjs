@@ -61,11 +61,11 @@ const height = kept.length * blockH + 30;
 let y = 50;
 const parts = [];
 for (const r of kept) {
-  parts.push(`<text x="0" y="${y}" class="h">${r.platform === 'ios' ? 'iOS simulator' : 'Android emulator'} · release build · median of ${r.runs} runs</text>`);
+  parts.push(`<text x="8" y="${y}" class="h">${r.platform === 'ios' ? 'iOS simulator' : 'Android emulator'} · release build · median of ${r.runs} runs</text>`);
   y += 16;
   for (const s of subjects) {
     const l = r.latency.find((x) => x.subject === s);
-    parts.push(`<text x="0" y="${y + 17}" class="l">${labels[s]}</text>`);
+    parts.push(`<text x="8" y="${y + 17}" class="l">${labels[s]}</text>`);
     parts.push(`<rect x="150" y="${y + 4}" width="${scale(l.p99Us).toFixed(1)}" height="14" rx="3" fill="${colors.p99}"/>`);
     parts.push(`<rect x="150" y="${y + 4}" width="${scale(l.p50Us).toFixed(1)}" height="14" rx="3" fill="${colors.p50}"/>`);
     parts.push(`<text x="${(160 + scale(l.p99Us)).toFixed(1)}" y="${y + 16}" class="v">p50 ${l.p50Us.toFixed(1)} µs · p99 ${l.p99Us.toFixed(1)} µs</text>`);
@@ -76,7 +76,7 @@ for (const r of kept) {
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" font-family="Inter, -apple-system, Segoe UI, sans-serif">
 <style>.t{font-size:16px;font-weight:700;fill:#18181b}.h{font-size:13px;font-weight:600;fill:#62626b}.l{font-size:13px;fill:#18181b}.v{font-size:12px;fill:#62626b}</style>
 <rect width="100%" height="100%" fill="#ffffff"/>
-<text x="0" y="22" class="t">Cost of one track() call on the JS thread (lower is better)</text>
+<text x="8" y="22" class="t">Cost of one track() call on the JS thread (lower is better)</text>
 <rect x="560" y="10" width="12" height="12" rx="3" fill="#4f46e5"/><text x="578" y="21" class="v">p50</text><rect x="620" y="10" width="12" height="12" rx="3" fill="#a5b4fc"/><text x="638" y="21" class="v">p99</text>
 ${parts.join('\n')}
 </svg>
