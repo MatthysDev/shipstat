@@ -9,7 +9,7 @@ const out = path.resolve(process.argv[2] ?? '/tmp/shipstat-cards');
 fs.mkdirSync(out, { recursive: true });
 const CHROME = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 
-const mark = `<span class="mark"><svg width="22" height="22" viewBox="0 0 12 12"><rect x="1" y="6" width="2.4" height="5" rx=".6" fill="currentColor"/><rect x="4.8" y="3.5" width="2.4" height="7.5" rx=".6" fill="currentColor"/><rect x="8.6" y="1" width="2.4" height="10" rx=".6" fill="currentColor"/></svg></span>`;
+const mark = `<svg width="48" height="48" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#14150f"/><path d="M15 42h14V24h13" fill="none" stroke="#fff" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="49.5" cy="24" r="5" fill="#f2542d"/></svg>`;
 
 const base = `
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Geist+Mono:wght@400;500&family=Caveat:wght@600&display=swap">
@@ -25,7 +25,7 @@ const base = `
   .step.a { background: #f2542d; }
   .label { font-size: 26px; font-weight: 800; letter-spacing: -.02em; }
   .sub { font-size: 24px; font-weight: 600; color: #a2a39a; }
-  .logo { display: flex; align-items: center; gap: 16px; font-size: 38px; font-weight: 800; letter-spacing: -.04em; }
+  .logo { display: flex; align-items: center; gap: 16px; font-size: 40px; font-weight: 800; letter-spacing: -.05em; }
   .mark { width: 48px; height: 48px; border-radius: 14px; background: #14150f; color: #fff; display: grid; place-items: center; }
   h1 { font-size: 128px; line-height: 1.02; letter-spacing: -.05em; font-weight: 800; }
   h2 { font-size: 68px; letter-spacing: -.045em; font-weight: 800; line-height: 1.04; }
@@ -37,7 +37,7 @@ const base = `
 
 const pages = {
   title: `${base}
-    <div style="position:absolute; left:120px; top:110px" class="logo">${mark}Shipstat</div>
+    <div style="position:absolute; left:120px; top:110px" class="logo">${mark}shipstat</div>
     <div style="position:absolute; left:120px; top:360px">
       <h1>Know if what you shipped<br>works <span class="hand">better</span>.</h1>
       <p class="badge" style="margin-top:56px"><i></i>Open source analytics &amp; A/B testing · React Native &amp; Expo</p>
@@ -58,7 +58,7 @@ const pages = {
     <div style="position:absolute; left:120px; top:96px"><p class="eyebrow">A/B tests</p><h2 style="margin-top:20px">Probability that B beats A,<br><span class="soft">overall and per version.</span></h2></div>`,
 
   end: `${base}
-    <div style="position:absolute; left:120px; top:110px" class="logo">${mark}Shipstat</div>
+    <div style="position:absolute; left:120px; top:110px" class="logo">${mark}shipstat</div>
     <div style="position:absolute; left:120px; top:330px">
       <h2 style="font-size:104px">Three lines. <span class="hand">One command.</span></h2>
       <div class="mono" style="margin-top:64px; font-size:40px; line-height:1.9">

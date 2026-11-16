@@ -12,17 +12,22 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&family=Caveat:wght@600&display=swap">
 <link rel="stylesheet" href="site.css">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<meta name="keywords" content="react native analytics, expo analytics, mobile analytics, react native a/b testing, open source analytics, vexo alternative, self-hosted analytics">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Shipstat","applicationCategory":"DeveloperApplication","operatingSystem":"iOS, Android","description":"Open source analytics and A/B testing for React Native and Expo apps.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"license":"https://opensource.org/licenses/MIT"}</script>
 </head>
 <body>
 <header class="nav wrap">
   <a class="logo" href="#top" aria-label="Shipstat">
-    <span class="mark"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><rect x="1" y="6" width="2.4" height="5" rx=".6" fill="currentColor"/><rect x="4.8" y="3.5" width="2.4" height="7.5" rx=".6" fill="currentColor"/><rect x="8.6" y="1" width="2.4" height="10" rx=".6" fill="currentColor"/></svg></span>
-    Shipstat
+    <svg class="mark" width="28" height="28" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16"/><path d="M15 42h14V24h13" fill="none" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="49.5" cy="24" r="5"/></svg>
+    shipstat
   </a>
   <nav>
     <a href="#setup">Setup</a>
     <a href="#examples">Examples</a>
     <a href="#performance">Performance</a>
+    <a href="#ai">For AI</a>
     <a href="https://github.com/MatthysDev/shipstat">GitHub</a>
   </nav>
   <a class="btn dark" href="demo/?demo">Live demo</a>
@@ -147,13 +152,46 @@ Shipstat.<span class="f">track</span>(<span class="s">'purchase_done'</span>);</
 
   <section id="performance" class="wrap section">
     <p class="eyebrow">Performance</p>
-    <h2>Measured, not promised.</h2>
-    <div class="numbers">
-      <div><b>0.9 µs</b><span>median <code>track()</code> cost, iOS release build</span></div>
-      <div><b>6×</b><span>cheaper than a minimal pure-JS analytics client</span></div>
-      <div><b>0.27 s</b><span>for 5 000 events to reach the server</span></div>
+    <h2>Invisible on the <span class="hand">JS thread</span>.</h2>
+    <p class="lead left">One <code>track()</code> is a JSON string and a single JSI call. Ids, context, SQLite and the network run on a native background queue.</p>
+    <div class="bars" role="img" aria-label="Median cost of one call on the JS thread, iOS release build">
+      <div class="bar-row"><span>Shipstat</span><div class="bar-track"><div class="bar-fill accent" style="width:14.8%"></div></div><b>0.9 µs</b></div>
+      <div class="bar-row"><span>Minimal JS analytics client</span><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><b>6.1 µs</b></div>
+      <div class="bar-row"><span>Empty function</span><div class="bar-track"><div class="bar-fill faint" style="width:1%"></div></div><b>&lt; 0.1 µs</b></div>
     </div>
-    <p class="note">10 000 calls timed one by one, median of several runs, on the iOS simulator and the Android emulator. Method, raw data and recordings in the <a href="https://github.com/MatthysDev/shipstat/tree/main/docs/perf">performance study</a>.</p>
+    <div class="numbers four">
+      <div><b>1.3 KB</b><span>of JavaScript, gzipped. Zero runtime dependencies.</span></div>
+      <div><b>23×</b><span>less disk time per event: bursts share one SQLite transaction.</span></div>
+      <div><b>20×</b><span>fewer bytes on the network with <code>compress: true</code>.</span></div>
+      <div><b>0.27 s</b><span>for 5 000 events to reach the server.</span></div>
+    </div>
+    <p class="note">Median of 10 000 calls timed one by one, several runs, release builds on the iOS simulator and the Android emulator. Method, raw data and recordings in the <a href="https://github.com/MatthysDev/shipstat/tree/main/docs/perf">performance study</a>.</p>
+  </section>
+
+  <section id="ai" class="wrap section">
+    <p class="eyebrow">For AI assistants</p>
+    <h2>Let your AI do the <span class="hand">integration</span>.</h2>
+    <div class="ai">
+      <div>
+        <p class="lead left">Paste one prompt into Claude Code, Cursor or Codex. It installs the module, sets context at the right time, writes a tracking plan from your navigation, places each <code>track()</code> where the outcome is known, and verifies it live.</p>
+        <div class="cta">
+          <button class="btn accent" type="button" data-copy-url="ai/integrate.md"><span class="copy">Copy the prompt</span></button>
+          <a class="btn" href="https://github.com/MatthysDev/shipstat/blob/main/docs/ai/integrate.md">Read it</a>
+        </div>
+        <p class="note">Also available as <a href="llms.txt">llms.txt</a> and as a <a href="https://github.com/MatthysDev/shipstat/tree/main/skills/shipstat">Claude Code skill</a>.</p>
+      </div>
+      <pre><code><span class="c"># What the prompt asks for</span>
+1. Install, rebuild the native app
+2. init() once, at module level
+3. setContext() before the first track()
+4. identify() after sign-in, setEnabled() for consent
+5. A tracking plan: 10–25 events
+   lifecycle · activation · core actions
+   monetization · retention
+6. snake_case object_action, flat props,
+   no personal data
+7. Verify live with npx shipstat-dashboard</code></pre>
+    </div>
   </section>
 
   <section class="wrap section faq">
@@ -181,6 +219,15 @@ Shipstat.<span class="f">track</span>(<span class="s">'purchase_done'</span>);</
 </footer>
 
 <script>
+  for (const b of document.querySelectorAll('[data-copy-url]')) {
+    b.addEventListener('click', async () => {
+      const text = await (await fetch(b.dataset.copyUrl)).text();
+      await navigator.clipboard.writeText(text);
+      const label = b.querySelector('.copy');
+      label.textContent = 'Copied, paste it in your AI';
+      setTimeout(() => (label.textContent = 'Copy the prompt'), 2000);
+    });
+  }
   for (const b of document.querySelectorAll('[data-copy]')) {
     b.addEventListener('click', async () => {
       await navigator.clipboard.writeText(b.dataset.copy);

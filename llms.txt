@@ -1,0 +1,29 @@
+# Shipstat
+
+> Open source analytics & A/B testing for React Native and Expo. A native module sends the events you choose, in JSON batches, to the API you choose. A static dashboard analyses them in the browser with DuckDB. No autocapture.
+
+## Install
+- Expo: `npx expo install shipstat` (native module: needs a development build, not Expo Go). Bare RN: `npm install shipstat && npx pod-install`.
+- Local receiver + dashboard: `npx shipstat-dashboard` → events on http://localhost:8787/events, dashboard on http://localhost:8787.
+
+## API (import Shipstat from 'shipstat')
+- `init({ endpoint, headers?, flushAt?=50, flushIntervalMs?=10000, maxQueueSize?=10000, enabled?=true, compress?=false, debug?=false })` — call once at module level in the app entry.
+- `track(name: string, props?: Record<string, string | number | boolean | null | Array<…>>)` — flat props only, never throws, ≈ 1 µs on the JS thread.
+- `setContext(ctx)` / `unsetContext(...keys)` — merged into every following event, persisted. Set before the first track (module level or useState initializer), not only in a top-level useEffect.
+- `identify(userId | null)` — internal user id after sign-in; null on sign-out.
+- `setEnabled(bool)` — user opt-out; disabling deletes waiting events.
+- `reset()`, `flush(): Promise<void>`, `getAnonId(): string`.
+- Added automatically to each event: app_version, build, ota, platform, os_version, device_model, locale, sdk_version.
+
+## Conventions
+- Event names: snake_case object_action, past tense (`paywall_viewed`, `purchase_done`). 10–25 events covering lifecycle, activation, core actions, monetization, retention.
+- No personal data in props or context. No screen or tap autocapture.
+- A/B tests: put the variant in context (`setContext({ variant })`), track an exposure event and a goal event.
+
+## Event format
+POST <endpoint>, JSON: `{ "schema": 1, "sent_at": ISO, "events": [{ id, name, ts, anon_id, user_id, props, context }] }`. 2xx accepts; 4xx (except 408/429) drops; 408/429/5xx/network retried with backoff. Optional `Content-Encoding: gzip`.
+
+## Docs
+- [README](https://github.com/MatthysDev/shipstat#readme)
+- [Integration prompt for AI assistants](https://github.com/MatthysDev/shipstat/blob/main/docs/ai/integrate.md)
+- [Performance study](https://github.com/MatthysDev/shipstat/tree/main/docs/perf)

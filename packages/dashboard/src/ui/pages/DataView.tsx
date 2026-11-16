@@ -6,6 +6,7 @@ import { demoEvents } from '../../lib/demo';
 import { fmtAgo, fmtInt } from '../../lib/format';
 import { readJson, writeJson } from '../../lib/storage';
 import type { LiveControl, Loaded } from '../App';
+import aiPrompt from '../../../../../docs/ai/integrate.md?raw';
 
 type Tab = 'api' | 'file' | 'supabase' | 'demo';
 
@@ -189,6 +190,12 @@ export function DataView({ loaded, onLoaded, live }: { loaded: Loaded; onLoaded:
           </div>
 
           <div className="card" style={{ marginTop: 16 }}>
+            <h2>Let your AI do the integration</h2>
+            <p className="muted lead">One prompt for Claude Code, Cursor or Codex: install, context at the right time, a tracking plan from your navigation, each track() where the outcome is known.</p>
+            <CopyButton text={aiPrompt} label="Copy the prompt" />
+          </div>
+
+          <div className="card" style={{ marginTop: 16 }}>
             <h2>Host this dashboard yourself</h2>
             <p className="muted lead">It is a static site: use the public one, or deploy your own copy anywhere.</p>
             <pre className="code">{HOSTING_SNIPPET}</pre>
@@ -196,6 +203,23 @@ export function DataView({ loaded, onLoaded, live }: { loaded: Loaded; onLoaded:
         </section>
       </div>
     </>
+  );
+}
+
+function CopyButton({ text, label }: { text: string; label: string }) {
+  const [done, setDone] = useState(false);
+  return (
+    <button
+      className="btn accent"
+      type="button"
+      onClick={async () => {
+        await navigator.clipboard.writeText(text);
+        setDone(true);
+        setTimeout(() => setDone(false), 2000);
+      }}
+    >
+      {done ? 'Copied, paste it in your AI' : label}
+    </button>
   );
 }
 

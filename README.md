@@ -1,13 +1,16 @@
 <div align="center">
 
-# Shipstat
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/brand/logo-dark.png">
+  <img src="docs/brand/logo-light.png" alt="Shipstat" width="300">
+</picture>
 
 **Know if what you shipped works better.**
 
 Open source analytics & A/B testing for React Native and Expo.<br>
 Track the events you choose. Split any number by release and variant. Your data stays on your API.
 
-[Setup](#setup) · [Examples](#examples) · [Dashboard](#dashboard) · [Performance](docs/perf/README.md) · [Event format](#event-format)
+[Setup](#setup) · [Examples](#examples) · [Dashboard](#dashboard) · [Performance](#performance) · [For AI assistants](#for-ai-assistants) · [Event format](#event-format)
 
 <a href="docs/media/promo.mp4"><img src="docs/media/promo.gif" width="860" alt="A tap in the app, the event on the dashboard, live"></a>
 
@@ -110,9 +113,21 @@ Added to every event: `app_version`, `build`, `ota`, `platform`, `os_version`, `
 
 ## Performance
 
-`track()` costs **≈ 1 µs on the JS thread** in release builds: a JSON string and one JSI call. Ids, context, SQLite and network run on a native background queue. That is 6–7× less than a minimal pure-JS client; 5 000 events reach the server in under a second. [Method, raw data and recordings](docs/perf/README.md).
+| | |
+|---|---|
+| **≈ 1 µs** | per `track()` on the JS thread (release, median), 6–7× less than a minimal pure-JS client |
+| **1.3 KB** | of JavaScript, gzipped, zero runtime dependencies |
+| **23×** | less disk time per event: a burst of calls shares one SQLite transaction |
+| **10–20×** | fewer bytes on the network with `compress: true` |
+| **< 1 s** | for 5 000 events to reach the server |
+
+`track()` is a JSON string and a single JSI call. Ids, context, SQLite and the network run on a native background queue. [Method, raw data and recordings](docs/perf/README.md).
 
 <img src="docs/perf/latency.svg" width="680" alt="track() cost compared with a naive JS SDK">
+
+## For AI assistants
+
+Paste [`docs/ai/integrate.md`](docs/ai/integrate.md) into Claude Code, Cursor or Codex: it installs the module, sets context at the right time, writes a tracking plan from your navigation (10–25 events: lifecycle, activation, core actions, monetization, retention), places each `track()` where the outcome is known, and verifies it live. Also available as [`llms.txt`](llms.txt) and as a [Claude Code skill](skills/shipstat/SKILL.md).
 
 ## Event format
 
@@ -143,7 +158,9 @@ Reply **2xx** to accept. **4xx** (except 408/429) drops the batch. **408, 429, 5
 | [`apps/example`](apps/example) | Example app with a Perf lab |
 | [`apps/site`](apps/site) | Landing page; `/demo` is the dashboard on sample data |
 | [`docs`](docs) | Design document, performance study |
-| [`scripts/media`](scripts/media) | Screenshots and promo video, reproducible |
+| [`scripts/media`](scripts/media) | Logo, screenshots and promo video, reproducible |
+| [`docs/ai`](docs/ai) · [`skills`](skills) · [`llms.txt`](llms.txt) | Integration prompt and skill for AI assistants |
+| [`docs/brand`](docs/brand) | Logo, icons |
 
 ```sh
 pnpm install

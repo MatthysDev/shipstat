@@ -10,7 +10,10 @@ if (!fs.existsSync(dashboard)) throw new Error('Build the dashboard first: pnpm 
 
 fs.rmSync(dist, { recursive: true, force: true });
 fs.mkdirSync(dist, { recursive: true });
-for (const f of ['index.html', 'site.css']) fs.copyFileSync(path.join(here, f), path.join(dist, f));
+for (const f of ['index.html', 'site.css', 'llms.txt']) fs.copyFileSync(path.join(here, f), path.join(dist, f));
+// The integration prompt is served next to the page so "Copy the prompt" can fetch it.
+fs.mkdirSync(path.join(dist, 'ai'), { recursive: true });
+fs.copyFileSync(path.resolve(here, '../../docs/ai/integrate.md'), path.join(dist, 'ai/integrate.md'));
 fs.cpSync(path.join(here, 'assets'), path.join(dist, 'assets'), { recursive: true });
 fs.cpSync(dashboard, path.join(dist, 'demo'), { recursive: true });
 console.log('site built in', path.relative(process.cwd(), dist));
