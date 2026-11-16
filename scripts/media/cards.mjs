@@ -12,36 +12,44 @@ const CHROME = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/M
 const mark = `<span class="mark"><svg width="22" height="22" viewBox="0 0 12 12"><rect x="1" y="6" width="2.4" height="5" rx=".6" fill="currentColor"/><rect x="4.8" y="3.5" width="2.4" height="7.5" rx=".6" fill="currentColor"/><rect x="8.6" y="1" width="2.4" height="10" rx=".6" fill="currentColor"/></svg></span>`;
 
 const base = `
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Geist+Mono:wght@400;500&family=Caveat:wght@600&display=swap">
 <style>
   * { box-sizing: border-box; margin: 0; }
-  body { width: 1920px; height: 1080px; background: #fff; color: #0a0a0a; font-family: Geist, sans-serif; -webkit-font-smoothing: antialiased; position: relative; overflow: hidden; }
+  body { width: 1920px; height: 1080px; background: #fbfaf6; color: #14150f; font-family: 'Plus Jakarta Sans', sans-serif; -webkit-font-smoothing: antialiased; position: relative; overflow: hidden; }
   .mono { font-family: "Geist Mono", monospace; }
-  .eyebrow { font: 500 22px "Geist Mono", monospace; letter-spacing: .1em; text-transform: uppercase; color: #9a9a9a; }
-  .logo { display: flex; align-items: center; gap: 16px; font-size: 34px; font-weight: 600; letter-spacing: -.03em; }
-  .mark { width: 44px; height: 44px; border-radius: 10px; background: #0a0a0a; color: #fff; display: grid; place-items: center; }
-  h1 { font-size: 132px; line-height: .95; letter-spacing: -.055em; font-weight: 600; }
-  h2 { font-size: 64px; letter-spacing: -.045em; font-weight: 600; line-height: 1; }
-  .soft { color: #a3a3a3; }
+  .eyebrow { font-size: 26px; font-weight: 700; color: #f2542d; letter-spacing: -.01em; }
+  .badge { display: inline-flex; align-items: center; gap: 12px; padding: 10px 22px 10px 16px; border-radius: 999px; background: #fff; box-shadow: 0 0 0 1px rgba(20,21,15,.06), 0 12px 24px -12px rgba(20,21,15,.12); font-size: 24px; font-weight: 600; color: #6b6c63; }
+  .badge i { width: 12px; height: 12px; border-radius: 50%; background: #f2542d; }
+  .hand { font-family: Caveat, cursive; font-weight: 600; color: #f2542d; font-size: 1.12em; }
+  .step { display: inline-grid; place-items: center; width: 48px; height: 48px; border-radius: 999px; background: #14150f; color: #fff; font-size: 22px; font-weight: 800; }
+  .step.a { background: #f2542d; }
+  .label { font-size: 26px; font-weight: 800; letter-spacing: -.02em; }
+  .sub { font-size: 24px; font-weight: 600; color: #a2a39a; }
+  .logo { display: flex; align-items: center; gap: 16px; font-size: 38px; font-weight: 800; letter-spacing: -.04em; }
+  .mark { width: 48px; height: 48px; border-radius: 14px; background: #14150f; color: #fff; display: grid; place-items: center; }
+  h1 { font-size: 128px; line-height: 1.02; letter-spacing: -.05em; font-weight: 800; }
+  h2 { font-size: 68px; letter-spacing: -.045em; font-weight: 800; line-height: 1.04; }
+  .soft { color: #a2a39a; }
   .accent { color: #f2542d; }
-  .line { position: absolute; left: 120px; right: 120px; height: 1px; background: #ececec; }
+  .line { position: absolute; left: 120px; right: 120px; height: 1px; background: #ebe9e2; }
+  .frame { position: absolute; background: #fff; box-shadow: 0 0 0 1px rgba(20,21,15,.05), 0 3px 3px -1.5px rgba(20,21,15,.05), 0 30px 40px -20px rgba(20,21,15,.12); }
 </style>`;
 
 const pages = {
   title: `${base}
     <div style="position:absolute; left:120px; top:110px" class="logo">${mark}Shipstat</div>
     <div style="position:absolute; left:120px; top:360px">
-      <h1>Know if what you shipped<br><span class="soft">works better.</span></h1>
-      <p class="eyebrow" style="margin-top:56px">Open source analytics &amp; A/B testing · React Native &amp; Expo</p>
+      <h1>Know if what you shipped<br>works <span class="hand">better</span>.</h1>
+      <p class="badge" style="margin-top:56px"><i></i>Open source analytics &amp; A/B testing · React Native &amp; Expo</p>
     </div>`,
 
   // Background of the split scene: the two videos are laid over the empty frames.
   split: `${base}
-    <div style="position:absolute; left:120px; top:72px; display:flex; gap:20px; align-items:baseline"><span class="eyebrow accent">01</span><span class="eyebrow" style="color:#0a0a0a">Your app</span><span class="eyebrow">Shipstat.track()</span></div>
-    <div style="position:absolute; left:720px; top:72px; display:flex; gap:20px; align-items:baseline"><span class="eyebrow accent">02</span><span class="eyebrow" style="color:#0a0a0a">Your dashboard</span><span class="eyebrow">live, in the browser</span></div>
-    <div style="position:absolute; left:120px; top:140px; width:462px; height:880px; border:2px solid #ececec; border-radius:28px"></div>
-    <div style="position:absolute; left:720px; top:140px; width:1080px; height:726px; border:2px solid #ececec; border-radius:14px"></div>
-    <div style="position:absolute; left:720px; top:920px; font-size:40px; font-weight:600; letter-spacing:-.035em">A tap in the app. The event on the dashboard. <span class="soft">About a second.</span></div>`,
+    <div style="position:absolute; left:120px; top:60px; display:flex; gap:16px; align-items:center"><span class="step a">1</span><span class="label">Your app</span><span class="sub">Shipstat.track()</span></div>
+    <div style="position:absolute; left:720px; top:60px; display:flex; gap:16px; align-items:center"><span class="step">2</span><span class="label">Your dashboard</span><span class="sub">live, in the browser</span></div>
+    <div class="frame" style="left:104px; top:124px; width:494px; height:912px; border-radius:44px"></div>
+    <div class="frame" style="left:705px; top:125px; width:1110px; height:756px; border-radius:26px"></div>
+    <div style="position:absolute; left:720px; top:930px; font-size:42px; font-weight:800; letter-spacing:-.04em">A tap in the app. The event on the dashboard. <span class="hand">About a second.</span></div>`,
 
   release: `${base}
     <div style="position:absolute; left:120px; top:96px"><p class="eyebrow">Every release</p><h2 style="margin-top:20px">Split any number by version,<br><span class="soft">build or OTA update.</span></h2></div>`,
@@ -52,7 +60,7 @@ const pages = {
   end: `${base}
     <div style="position:absolute; left:120px; top:110px" class="logo">${mark}Shipstat</div>
     <div style="position:absolute; left:120px; top:330px">
-      <h2 style="font-size:96px">Three lines. One command.</h2>
+      <h2 style="font-size:104px">Three lines. <span class="hand">One command.</span></h2>
       <div class="mono" style="margin-top:64px; font-size:40px; line-height:1.9">
         <div><span class="soft">$</span> npx expo install shipstat</div>
         <div><span class="soft">→</span> Shipstat.track(<span class="accent">'paywall_viewed'</span>)</div>

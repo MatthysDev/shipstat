@@ -18,7 +18,7 @@ enc() { ffmpeg -y -loglevel error "$@"; }
 
 enc -loop 1 -t 2.8 -i $CARDS/title.png -vf "$F" -c:v libx264 -crf 16 $WORK/1.mp4
 enc -loop 1 -t $LEN -i $CARDS/split.png -ss $START -t $LEN -i "$PHONE" -ss $DASH_START -t $LEN -i "$DASH" -filter_complex \
-  "[1:v]scale=-2:856:flags=lanczos,setpts=PTS-STARTPTS[ph];[2:v]setpts=PTS-STARTPTS[db];[0:v][ph]overlay=x=120+(462-overlay_w)/2:y=152[a];[a][db]overlay=x=721:y=141,$F" \
+  "[1:v]scale=-2:856:flags=lanczos,setpts=PTS-STARTPTS[ph];[2:v]setpts=PTS-STARTPTS[db];[0:v][ph]overlay=x=120+(462-overlay_w)/2:y=152[a];[a][db]overlay=x=720:y=140,$F" \
   -t $LEN -c:v libx264 -crf 16 $WORK/2.mp4
 for pair in "release board" "abtest ab"; do
   set -- $pair
