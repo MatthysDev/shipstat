@@ -57,18 +57,18 @@ export interface ArmRow {
 }
 
 export async function arms(e: Experiment): Promise<ArmRow[]> {
-  return query<ArmRow>(`WITH ${usersCte(e)} SELECT v, count(*) exposed, count_if(converted) converted FROM users GROUP BY v ORDER BY v`);
+  return query<ArmRow>(`WITH ${usersCte(e)} SELECT v, count(*)::BIGINT exposed, count_if(converted)::BIGINT converted FROM users GROUP BY v ORDER BY v`);
 }
 
 export async function armsByVersion(e: Experiment): Promise<(ArmRow & { ver: string })[]> {
-  return query(`WITH ${usersCte(e)} SELECT coalesce(ver, '(none)') ver, v, count(*) exposed, count_if(converted) converted FROM users GROUP BY 1, 2 ORDER BY 1 DESC, 2`);
+  return query(`WITH ${usersCte(e)} SELECT coalesce(ver, '(none)') ver, v, count(*)::BIGINT exposed, count_if(converted)::BIGINT converted FROM users GROUP BY 1, 2 ORDER BY 1 DESC, 2`);
 }
 
 /** Cumulative conversion rate by day of first exposure, per variant. */
 export async function cumulative(e: Experiment): Promise<{ day: Date; v: string; rate: number }[]> {
   const rows = await query<{ day: Date; v: string; exposed: number; converted: number }>(`
     WITH ${usersCte(e)}
-    SELECT date_trunc('day', first_ts) AS day, v, count(*) exposed, count_if(converted) converted FROM users GROUP BY 1, 2 ORDER BY 1`);
+    SELECT date_trunc('day', first_ts) AS day, v, count(*)::BIGINT exposed, count_if(converted)::BIGINT converted FROM users GROUP BY 1, 2 ORDER BY 1`);
   const acc: Record<string, { e: number; c: number }> = {};
   return rows.map((r) => {
     const a = (acc[r.v] ??= { e: 0, c: 0 });

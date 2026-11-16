@@ -1,3 +1,6 @@
+import * as Shipstat from '../index';
+import { checkEvent, normalizeConfig } from '../validate';
+
 jest.mock('../ShipstatModule', () => ({
   __esModule: true,
   default: {
@@ -12,9 +15,6 @@ jest.mock('../ShipstatModule', () => ({
   getAnonId: jest.fn(() => 'anon'),
 },
 }));
-
-import Shipstat from '../index';
-import { checkEvent, normalizeConfig } from '../validate';
 
 const mockNative = jest.requireMock('../ShipstatModule').default;
 

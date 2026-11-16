@@ -5,13 +5,12 @@
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "scripts": {
-    "build": "node internal/module_scripts/build.js",
-    "clean": "node internal/module_scripts/clean.js",
+    "build": "tsc",
+    "clean": "rm -rf build",
     "lint": "eslint src/",
-    "test": "node internal/module_scripts/test.js",
-    "prepare": "node internal/module_scripts/prepare.js",
-    "open:ios": "node internal/module_scripts/open-ios.js",
-    "open:android": "node internal/module_scripts/open-android.js"
+    "test": "jest",
+    "typecheck": "tsc --noEmit",
+    "prepare": "tsc"
   },
   "keywords": [
     "react-native",
@@ -25,7 +24,11 @@
     "vexo-alternative",
     "shipstat"
   ],
-  "repository": "https://github.com/MatthysDev/shipstat",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MatthysDev/shipstat.git",
+    "directory": "packages/sdk"
+  },
   "bugs": {
     "url": "https://github.com/MatthysDev/shipstat/issues"
   },
@@ -64,8 +67,10 @@
     "build",
     "src",
     "ios",
-    "android",
+    "android/build.gradle",
+    "android/src",
     "expo-module.config.json",
     "!**/__tests__"
-  ]
+  ],
+  "sideEffects": false
 }

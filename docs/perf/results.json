@@ -1,0 +1,192 @@
+[
+  {
+    "platform": "android",
+    "osVersion": "35",
+    "build": "release",
+    "runs": 5,
+    "dates": [
+      "2026-11-16T15:03:05.444Z",
+      "2026-11-16T15:05:41.064Z",
+      "2026-11-16T15:06:24.710Z",
+      "2026-11-16T15:06:57.740Z",
+      "2026-11-16T15:08:46.474Z"
+    ],
+    "latency": [
+      {
+        "subject": "noop",
+        "calls": 10000,
+        "meanUs": 0.12416639067232609,
+        "p50Us": 0.08299946784973145,
+        "p95Us": 0.0840015709400177,
+        "p99Us": 0.20899996161460876,
+        "maxUs": 38.040999323129654
+      },
+      {
+        "subject": "naive",
+        "calls": 10000,
+        "meanUs": 9.071337401866913,
+        "p50Us": 6.541997194290161,
+        "p95Us": 10.208997875452042,
+        "p99Us": 71.79199904203415,
+        "maxUs": 626.665998250246
+      },
+      {
+        "subject": "shipstat",
+        "calls": 10000,
+        "meanUs": 2.1239823166280987,
+        "p50Us": 1.0409988462924957,
+        "p95Us": 1.8750019371509552,
+        "p99Us": 32.16699883341789,
+        "maxUs": 1264.4170001149178
+      }
+    ],
+    "frames": [
+      {
+        "subject": "noop",
+        "perFrame": 20,
+        "eventsPerSecond": 1200,
+        "seconds": 3,
+        "fps": 59.98314719493585,
+        "longFrames": 2
+      },
+      {
+        "subject": "naive",
+        "perFrame": 20,
+        "eventsPerSecond": 1200,
+        "seconds": 3,
+        "fps": 59.96360271598479,
+        "longFrames": 4
+      },
+      {
+        "subject": "shipstat",
+        "perFrame": 20,
+        "eventsPerSecond": 1200,
+        "seconds": 3,
+        "fps": 59.99766757063608,
+        "longFrames": 1
+      },
+      {
+        "subject": "noop",
+        "perFrame": 100,
+        "eventsPerSecond": 6000,
+        "seconds": 3,
+        "fps": 59.998632511222894,
+        "longFrames": 2
+      },
+      {
+        "subject": "naive",
+        "perFrame": 100,
+        "eventsPerSecond": 6000,
+        "seconds": 3,
+        "fps": 60.01650866475028,
+        "longFrames": 1
+      },
+      {
+        "subject": "shipstat",
+        "perFrame": 100,
+        "eventsPerSecond": 6000,
+        "seconds": 3,
+        "fps": 60.02743932523902,
+        "longFrames": 0
+      }
+    ],
+    "delivery": {
+      "events": 5000,
+      "ms": 610.6333750002086
+    }
+  },
+  {
+    "platform": "ios",
+    "osVersion": "27.0",
+    "build": "release",
+    "runs": 3,
+    "dates": [
+      "2026-11-16T15:00:33.988Z",
+      "2026-11-16T15:07:36.553Z",
+      "2026-11-16T15:08:09.208Z"
+    ],
+    "latency": [
+      {
+        "subject": "noop",
+        "calls": 10000,
+        "meanUs": 0.0945622444152832,
+        "p50Us": 0.042438507080078125,
+        "p95Us": 0.16689300537109375,
+        "p99Us": 0.2498626708984375,
+        "maxUs": 147.1247673034668
+      },
+      {
+        "subject": "naive",
+        "calls": 10000,
+        "meanUs": 7.402600622177124,
+        "p50Us": 6.124973297119141,
+        "p95Us": 8.042335510253906,
+        "p99Us": 45.207977294921875,
+        "maxUs": 477.083683013916
+      },
+      {
+        "subject": "shipstat",
+        "calls": 10000,
+        "meanUs": 0.9247326850891113,
+        "p50Us": 0.8749961853027344,
+        "p95Us": 1.0833740234375,
+        "p99Us": 1.4162063598632812,
+        "maxUs": 115.54145812988281
+      }
+    ],
+    "frames": [
+      {
+        "subject": "noop",
+        "perFrame": 20,
+        "eventsPerSecond": 1200,
+        "seconds": 3,
+        "fps": 59.99741281737999,
+        "longFrames": 0
+      },
+      {
+        "subject": "naive",
+        "perFrame": 20,
+        "eventsPerSecond": 1200,
+        "seconds": 3,
+        "fps": 59.99964834419361,
+        "longFrames": 0
+      },
+      {
+        "subject": "shipstat",
+        "perFrame": 20,
+        "eventsPerSecond": 1200,
+        "seconds": 3,
+        "fps": 60.001716353053496,
+        "longFrames": 0
+      },
+      {
+        "subject": "noop",
+        "perFrame": 100,
+        "eventsPerSecond": 6000,
+        "seconds": 3,
+        "fps": 60.00151411368222,
+        "longFrames": 0
+      },
+      {
+        "subject": "naive",
+        "perFrame": 100,
+        "eventsPerSecond": 6000,
+        "seconds": 3,
+        "fps": 60.00116522717751,
+        "longFrames": 0
+      },
+      {
+        "subject": "shipstat",
+        "perFrame": 100,
+        "eventsPerSecond": 6000,
+        "seconds": 3,
+        "fps": 59.99576447824492,
+        "longFrames": 0
+      }
+    ],
+    "delivery": {
+      "events": 5000,
+      "ms": 272.27874994277954
+    }
+  }
+]

@@ -12,7 +12,7 @@ export type NativeConfig = {
   ota: string | null;
 };
 
-declare class ShipstatNativeModule extends NativeModule<{}> {
+declare class ShipstatNativeModule extends NativeModule<Record<string, never>> {
   init(config: NativeConfig): void;
   track(name: string, propsJson: string | null, tsMs: number): void;
   setContext(ctx: Record<string, unknown>): void;

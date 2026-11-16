@@ -69,6 +69,17 @@ http.createServer((req, res) => {
     return send(res, 200, { events: page, next_cursor: next < events.length ? String(next) : null, cursor: String(next) });
   }
 
+  if (req.method === 'POST' && url.pathname === '/bench') {
+    let raw = '';
+    req.on('data', (c) => (raw += c));
+    req.on('end', () => {
+      fs.appendFileSync(path.resolve(path.dirname(FILE), 'bench-results.ndjson'), raw.replace(/\n/g, ' ') + '\n');
+      console.log('benchmark report received');
+      send(res, 200, { ok: true });
+    });
+    return;
+  }
+
   if (req.method === 'GET' && url.pathname === '/health') return send(res, 200, { ok: true, events: events.length });
   send(res, 404, { error: 'not found' });
 }).listen(PORT, () => console.log(`shipstat dev server on http://localhost:${PORT} (${events.length} events in ${FILE})`));

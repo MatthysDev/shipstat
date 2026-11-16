@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="374" viewBox="0 0 860 374" font-family="Inter, -apple-system, Segoe UI, sans-serif">
+<style>.t{font-size:16px;font-weight:700;fill:#18181b}.h{font-size:13px;font-weight:600;fill:#62626b}.l{font-size:13px;fill:#18181b}.v{font-size:12px;fill:#62626b}</style>
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="0" y="22" class="t">Cost of one track() call on the JS thread (lower is better)</text>
+<rect x="560" y="10" width="12" height="12" rx="3" fill="#4f46e5"/><text x="578" y="21" class="v">p50</text><rect x="620" y="10" width="12" height="12" rx="3" fill="#a5b4fc"/><text x="638" y="21" class="v">p99</text>
+<text x="0" y="50" class="h">Android emulator · release build · median of 5 runs</text>
+<text x="0" y="83" class="l">empty function</text>
+<rect x="150" y="70" width="1.5" height="14" rx="3" fill="#a5b4fc"/>
+<rect x="150" y="70" width="1.5" height="14" rx="3" fill="#4f46e5"/>
+<text x="161.5" y="82" class="v">p50 0.1 µs · p99 0.2 µs</text>
+<text x="0" y="113" class="l">naive JS SDK</text>
+<rect x="150" y="100" width="430.0" height="14" rx="3" fill="#a5b4fc"/>
+<rect x="150" y="100" width="39.2" height="14" rx="3" fill="#4f46e5"/>
+<text x="590.0" y="112" class="v">p50 6.5 µs · p99 71.8 µs</text>
+<text x="0" y="143" class="l">Shipstat</text>
+<rect x="150" y="130" width="192.7" height="14" rx="3" fill="#a5b4fc"/>
+<rect x="150" y="130" width="6.2" height="14" rx="3" fill="#4f46e5"/>
+<text x="352.7" y="142" class="v">p50 1.0 µs · p99 32.2 µs</text>
+<text x="0" y="196" class="h">iOS simulator · release build · median of 3 runs</text>
+<text x="0" y="229" class="l">empty function</text>
+<rect x="150" y="216" width="1.5" height="14" rx="3" fill="#a5b4fc"/>
+<rect x="150" y="216" width="1.5" height="14" rx="3" fill="#4f46e5"/>
+<text x="161.5" y="228" class="v">p50 0.0 µs · p99 0.2 µs</text>
+<text x="0" y="259" class="l">naive JS SDK</text>
+<rect x="150" y="246" width="270.8" height="14" rx="3" fill="#a5b4fc"/>
+<rect x="150" y="246" width="36.7" height="14" rx="3" fill="#4f46e5"/>
+<text x="430.8" y="258" class="v">p50 6.1 µs · p99 45.2 µs</text>
+<text x="0" y="289" class="l">Shipstat</text>
+<rect x="150" y="276" width="8.5" height="14" rx="3" fill="#a5b4fc"/>
+<rect x="150" y="276" width="5.2" height="14" rx="3" fill="#4f46e5"/>
+<text x="168.5" y="288" class="v">p50 0.9 µs · p99 1.4 µs</text>
+</svg>

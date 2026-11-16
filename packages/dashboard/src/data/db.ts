@@ -51,8 +51,10 @@ export async function query<T = Row>(sql: string): Promise<T[]> {
   for (const r of table.toArray()) {
     const o: Row = {};
     for (const f of fields) {
-      let v = r[f.name];
+      let v: unknown = r[f.name];
       if (typeof v === 'bigint') v = Number(v);
+      // HUGEINT / DECIMAL arrive as Arrow objects: go through their string form.
+      else if ((f.typeId === Type.Decimal || f.typeId === Type.Int) && v !== null && typeof v === 'object') v = Number(String(v));
       if (f.typeId === Type.Timestamp && typeof v === 'number') v = new Date(v);
       o[f.name] = v;
     }

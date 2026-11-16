@@ -1,5 +1,5 @@
-import Native from './ShipstatModule';
 import type { Context, Props, ShipstatConfig } from './Shipstat.types';
+import Native from './ShipstatModule';
 import { checkContext, checkEvent, normalizeConfig } from './validate';
 import { SDK_VERSION } from './version';
 
@@ -15,7 +15,7 @@ function warn(errors: string[]) {
 function readOtaId(): string | null {
   try {
     // Optional: only present when the app uses expo-updates.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+     
     const Updates = require('expo-updates');
     return (Updates && typeof Updates.updateId === 'string' && Updates.updateId) || null;
   } catch {
