@@ -69,6 +69,10 @@ final class EventStore {
     sqlite3_finalize(stmt)
   }
 
+  func clear() {
+    exec("DELETE FROM events;")
+  }
+
   /// Keeps only the newest `max` events.
   func trim(to max: Int) {
     var stmt: OpaquePointer?

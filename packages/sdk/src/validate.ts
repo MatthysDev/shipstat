@@ -46,3 +46,11 @@ export function normalizeConfig(config: ShipstatConfig) {
     debug: config.debug ?? false,
   };
 }
+
+/** Keeps only valid primitives, in production too: native JSON writers reject NaN and Infinity. */
+export function cleanContext(ctx: unknown): Context {
+  if (typeof ctx !== 'object' || ctx === null || Array.isArray(ctx)) return {};
+  const out: Context = {};
+  for (const [k, v] of Object.entries(ctx)) if (isPrimitive(v)) out[k] = v as Context[string];
+  return out;
+}

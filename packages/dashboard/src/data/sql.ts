@@ -41,9 +41,12 @@ export function where(from: Date, to: Date, f: Filters, extra: string[] = []): s
   return 'WHERE ' + [...parts, ...extra].join(' AND ');
 }
 
-/** Periods end at the newest event, so imported or old data still shows. */
+/**
+ * Periods end at the newest event, so imported or old data still shows. Client clocks set
+ * in the future are ignored, otherwise one wrong device would push every window past the data.
+ */
 export async function period(range: Range): Promise<Period> {
-  const [r] = await query<{ t: Date | null }>('SELECT max(ts) AS t FROM events');
+  const [r] = await query<{ t: Date | null }>(`SELECT max(ts) AS t FROM events WHERE ts <= now()::TIMESTAMP + INTERVAL 1 DAY`);
   const to = r?.t ? new Date(r.t) : new Date();
   const days = RANGE_DAYS[range];
   const from = new Date(to.getTime() - days * 86400_000);

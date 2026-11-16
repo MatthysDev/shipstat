@@ -65,6 +65,22 @@ describe('track', () => {
   });
 });
 
+describe('robustness', () => {
+  it('never throws on unserializable props', () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const circular: Record<string, unknown> = {};
+    circular.self = circular;
+    expect(() => Shipstat.track('ok_name', circular as never)).not.toThrow();
+    expect(mockNative.track).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('drops non-finite context values even when validation is off', () => {
+    const { cleanContext } = jest.requireActual('../validate');
+    expect(cleanContext({ a: 1, b: NaN, c: Infinity, d: 'x', e: { nested: true } })).toEqual({ a: 1, d: 'x' });
+  });
+});
+
 describe('validation', () => {
   it('accepts primitives and arrays of primitives in props', () => {
     expect(checkEvent('ok', { a: 'x', b: 1, c: true, d: null, e: [1, 'two'] })).toEqual([]);

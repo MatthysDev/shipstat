@@ -1,6 +1,6 @@
 import type { Context, Props, ShipstatConfig } from './Shipstat.types';
 import Native from './ShipstatModule';
-import { checkContext, checkEvent, normalizeConfig } from './validate';
+import { checkContext, checkEvent, cleanContext, normalizeConfig } from './validate';
 import { SDK_VERSION } from './version';
 
 export * from './Shipstat.types';
@@ -34,8 +34,15 @@ export function track(name: string, props?: Props): void {
     const errors = checkEvent(name, props);
     if (errors.length) return warn(errors);
   }
-  // Props cross the bridge as one JSON string: much cheaper than converting an object key by key.
-  Native.track(name, props ? JSON.stringify(props) : null, Date.now());
+  let json: string | null = null;
+  try {
+    // Props cross the bridge as one JSON string: much cheaper than converting an object key by key.
+    json = props ? JSON.stringify(props) : null;
+  } catch {
+    // Circular or BigInt values: analytics must never throw into the app.
+    return warn([`event ${name} dropped: props are not serializable`]);
+  }
+  Native.track(name, json, Date.now());
 }
 
 /** Merge keys into the global context added to every following event. Persisted across launches. */
@@ -44,7 +51,7 @@ export function setContext(ctx: Context): void {
     const errors = checkContext(ctx);
     if (errors.length) return warn(errors);
   }
-  Native.setContext(ctx);
+  Native.setContext(cleanContext(ctx));
 }
 
 /** Remove keys from the global context. */

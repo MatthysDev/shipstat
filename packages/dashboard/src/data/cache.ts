@@ -1,4 +1,4 @@
-import { getDb, insertFrom, lit } from './db';
+import { getDb, insertFrom, lit, stitchIdentities } from './db';
 
 /**
  * Keeps loaded events between visits: a Parquet snapshot in the browser's private
@@ -44,6 +44,7 @@ export async function restoreCache(): Promise<CacheMeta | null> {
     await db.registerFileBuffer('restore.parquet', new Uint8Array(await file.arrayBuffer()));
     await insertFrom(`read_parquet('restore.parquet')`);
     await db.dropFile('restore.parquet');
+    await stitchIdentities();
     return JSON.parse(raw) as CacheMeta;
   } catch {
     return null;

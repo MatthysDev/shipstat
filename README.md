@@ -74,8 +74,8 @@ Works with Expo (development builds) and bare React Native apps that use `expo-m
 | `init(config)` | `endpoint` (required), `headers`, `flushAt` (50), `flushIntervalMs` (10 000), `maxQueueSize` (10 000), `enabled` (true), `debug` (false). Events tracked before `init` are kept. |
 | `track(name, props?)` | Props are flat: strings, numbers, booleans, `null`, or arrays of them. |
 | `setContext(ctx)` / `unsetContext(...keys)` | Global tags merged into every following event. Persisted. |
-| `identify(userId \| null)` | Attach your own user id; `null` on sign-out. |
-| `setEnabled(bool)` | User opt-out. When disabled nothing is stored or sent. Persisted. |
+| `identify(userId \| null)` | Attach your own user id; `null` on sign-out. The dashboard links the install's earlier anonymous events to that user, so funnels and A/B tests count one person once. |
+| `setEnabled(bool)` | User opt-out. Disabling deletes events still waiting on the device; nothing is stored or sent until re-enabled. Persisted. |
 | `reset()` | New anonymous id; context and user id cleared. |
 | `flush()` | Send now. Resolves when the attempt is over. |
 | `getAnonId()` | The anonymous id of this install. |

@@ -15,10 +15,24 @@ const seen = new Set();
 if (fs.existsSync(FILE)) {
   for (const line of fs.readFileSync(FILE, 'utf8').split('\n')) {
     if (!line) continue;
-    const e = JSON.parse(line);
-    events.push(e);
-    seen.add(e.id);
+    try {
+      const e = JSON.parse(line);
+      events.push(e);
+      seen.add(e.id);
+    } catch {
+      // A line cut by a hard kill: skip it rather than refuse to start.
+    }
   }
+}
+
+/** Reads a whole request body as UTF-8 (chunks are joined as bytes, so characters are never split). */
+function readBody(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    req.on('data', (c) => chunks.push(c));
+    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    req.on('error', reject);
+  });
 }
 
 const cors = {
@@ -37,9 +51,7 @@ http.createServer((req, res) => {
   if (TOKEN && req.headers.authorization !== `Bearer ${TOKEN}`) return send(res, 401, { error: 'unauthorized' });
 
   if (req.method === 'POST' && url.pathname === '/events') {
-    let raw = '';
-    req.on('data', (c) => (raw += c));
-    req.on('end', () => {
+    readBody(req).then((raw) => {
       let batch;
       try { batch = JSON.parse(raw); } catch { return send(res, 400, { error: 'invalid json' }); }
       if (!Array.isArray(batch?.events)) return send(res, 400, { error: 'missing events' });
@@ -70,9 +82,7 @@ http.createServer((req, res) => {
   }
 
   if (req.method === 'POST' && url.pathname === '/bench') {
-    let raw = '';
-    req.on('data', (c) => (raw += c));
-    req.on('end', () => {
+    readBody(req).then((raw) => {
       fs.appendFileSync(path.resolve(path.dirname(FILE), 'bench-results.ndjson'), raw.replace(/\n/g, ' ') + '\n');
       console.log('benchmark report received');
       send(res, 200, { ok: true });

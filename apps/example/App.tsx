@@ -32,6 +32,7 @@ function Demo() {
   const [variant, setVariant] = useState<'A' | 'B'>('A');
   const [log, setLog] = useState<string[]>([]);
   const [anonId, setAnonId] = useState('');
+  const [optedOut, setOptedOut] = useState(false);
   const add = (line: string) => setLog((l) => [line, ...l].slice(0, 10));
 
   useEffect(() => {
@@ -59,6 +60,12 @@ function Demo() {
       <Button id="track-purchase" label="track('purchase_done')" onPress={() => { Shipstat.track('purchase_done', { plan: 'yearly', price: 59.99 }); add(`purchase_done · variant ${variant}`); }} />
       <Button id="identify" label="identify('user_42')" onPress={() => { Shipstat.identify('user_42'); add('identify user_42'); }} secondary />
       <Button id="flush" label="flush()" onPress={async () => { await Shipstat.flush(); add('flushed ✓'); }} secondary />
+      <Button
+        id="opt-out"
+        label={optedOut ? 'setEnabled(true)' : 'setEnabled(false)'}
+        onPress={() => { Shipstat.setEnabled(optedOut); setOptedOut(!optedOut); add(optedOut ? 'tracking enabled' : 'opted out: queue cleared'); }}
+        secondary
+      />
 
       <View style={styles.log}>
         {log.map((l, i) => <Text key={i} style={styles.logLine}>{l}</Text>)}

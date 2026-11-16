@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { clearCache, saveCache } from '../../data/cache';
-import { clearEvents, importFile, insertEvents } from '../../data/db';
+import { clearEvents, importFile, insertEvents, stitchIdentities } from '../../data/db';
 import { syncApi, syncSupabase, type ApiSource, type SupabaseSource } from '../../data/sources';
 import { demoEvents } from '../../lib/demo';
 import { fmtAgo, fmtInt } from '../../lib/format';
@@ -70,6 +70,7 @@ export function DataView({ loaded, onLoaded }: { loaded: Loaded; onLoaded: (sour
     const t0 = performance.now();
     try {
       await load();
+      await stitchIdentities();
       setElapsed(performance.now() - t0);
       await onLoaded(source);
       await saveCache(source);

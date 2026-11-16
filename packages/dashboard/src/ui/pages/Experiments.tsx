@@ -4,6 +4,7 @@ import { distinctValues, eventNames } from '../../data/queries';
 import { fmtInt, fmtPct, fmtSignedPct } from '../../lib/format';
 import { color } from '../../lib/palette';
 import { compare, exposuresNeeded, type Comparison } from '../../lib/stats';
+import { newId } from '../../lib/boards';
 import { downloadJson, isArray, readJson, writeJson } from '../../lib/storage';
 import { Legend } from '../charts/Legend';
 import { Lines } from '../charts/Lines';
@@ -15,7 +16,7 @@ const THRESHOLD = 0.95;
 
 const isExperiments = (v: unknown): v is Experiment[] => isArray(v) && v.every(isExperiment);
 const load = () => readJson<Experiment[]>(KEY, [], isExperiments);
-const blank = (): Experiment => ({ id: crypto.randomUUID(), name: '', exposure: '', goal: '', variantKey: 'variant', control: 'A' });
+const blank = (): Experiment => ({ id: newId(), name: '', exposure: '', goal: '', variantKey: 'variant', control: 'A' });
 
 export function Experiments({ version }: { version: number }) {
   const [list, setList] = useState<Experiment[]>(load);
@@ -161,7 +162,8 @@ function Results({ exp, version, onEdit }: { exp: Experiment; version: number; o
 
   const d = data.data;
   if (data.error) return <div className="err">{data.error}</div>;
-  if (!d) return <div className="loading">Crunching…</div>;
+  // Never show the previous test's numbers under this test's labels.
+  if (!d || data.loading) return <div className="loading">Crunching…</div>;
   if (!d.arms.length) return <div className="card empty"><h2>No exposure found</h2><p>No <code>{exp.exposure}</code> event carries a <code>{exp.variantKey}</code> value in the loaded data.</p><button className="btn" onClick={onEdit}>Edit test</button></div>;
   if (!d.control) return <div className="card empty"><h2>Control “{exp.control}” not found</h2><p>Values seen: {d.arms.map((a) => a.v).join(', ')}</p><button className="btn" onClick={onEdit}>Edit test</button></div>;
 

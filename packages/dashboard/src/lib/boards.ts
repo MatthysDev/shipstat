@@ -59,7 +59,8 @@ const isBoards = (v: unknown): v is Board[] => isArray(v) && v.every(isBoard);
 export const loadBoards = () => readJson<Board[]>(KEY, [], isBoards);
 export const saveBoards = (b: Board[]) => writeJson(KEY, b);
 
-export const newId = () => crypto.randomUUID().slice(0, 8);
+/** Random id. crypto.randomUUID only exists on HTTPS, and self-hosted copies may run on plain HTTP. */
+export const newId = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
 
 export function blankWidget(): Widget {
   return { id: newId(), title: 'New chart', viz: 'line', metric: 'events', range: '30d', filters: {}, size: 1 };

@@ -86,6 +86,21 @@ const INSERT_FROM = (src: string) => `
   FROM ${src}
   WHERE id IS NOT NULL AND name IS NOT NULL AND ts IS NOT NULL`;
 
+/**
+ * One person = one uid: once an install calls identify(), its anonymous events before sign-in
+ * are attributed to the same user, so funnels and A/B tests do not split them in two.
+ */
+const STITCH_IDENTITIES = `
+  UPDATE events SET uid = ids.user_id
+  FROM (SELECT anon_id, max(user_id) AS user_id FROM events WHERE user_id IS NOT NULL GROUP BY anon_id) ids
+  WHERE events.anon_id = ids.anon_id AND events.uid <> ids.user_id`;
+
+/** Run once after a load (not per page): it scans the whole table. */
+export async function stitchIdentities(): Promise<void> {
+  const { conn } = await getDb();
+  await conn.query(STITCH_IDENTITIES);
+}
+
 /** Inserts rows from any DuckDB table function with the event columns. */
 export async function insertFrom(src: string): Promise<void> {
   const { conn } = await getDb();
@@ -97,21 +112,19 @@ let fileSeq = 0;
 /** Adds events given as JS objects (from an API or Supabase). Duplicates (same id) are ignored. */
 export async function insertEvents(events: unknown[]): Promise<number> {
   if (!events.length) return 0;
-  const { db, conn } = await getDb();
+  const { db } = await getDb();
   const name = `batch_${++fileSeq}.ndjson`;
   const ndjson = events.map((e) => JSON.stringify(e)).join('\n');
   await db.registerFileText(name, ndjson);
   const before = await countEvents();
-  await conn.query(
-    INSERT_FROM(`read_json(${lit(name)}, format='newline_delimited', columns={id:'VARCHAR', name:'VARCHAR', ts:'VARCHAR', anon_id:'VARCHAR', user_id:'VARCHAR', props:'JSON', context:'JSON'})`)
-  );
+  await insertFrom(`read_json(${lit(name)}, format='newline_delimited', columns={id:'VARCHAR', name:'VARCHAR', ts:'VARCHAR', anon_id:'VARCHAR', user_id:'VARCHAR', props:'JSON', context:'JSON'})`);
   await db.dropFile(name);
   return (await countEvents()) - before;
 }
 
 /** Imports a CSV, JSON / NDJSON or Parquet export of an events table. */
 export async function importFile(file: File): Promise<number> {
-  const { db, conn } = await getDb();
+  const { db } = await getDb();
   const ext = file.name.toLowerCase().split('.').pop();
   const name = `import_${++fileSeq}.${ext}`;
   await db.registerFileHandle(name, file, duckdb.DuckDBDataProtocol.BROWSER_FILEREADER, true);
@@ -122,7 +135,7 @@ export async function importFile(file: File): Promise<number> {
     src = `read_json(${lit(name)}, columns={id:'VARCHAR', name:'VARCHAR', ts:'VARCHAR', anon_id:'VARCHAR', user_id:'VARCHAR', props:'JSON', context:'JSON'})`;
   } else throw new Error('Unsupported file: use .csv, .json, .ndjson or .parquet');
   const before = await countEvents();
-  await conn.query(INSERT_FROM(src));
+  await insertFrom(src);
   await db.dropFile(name);
   return (await countEvents()) - before;
 }

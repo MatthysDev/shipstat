@@ -33,6 +33,7 @@ final class ShipstatCore {
   private var context: [String: Any] = [:]
   private var anonId = ""
   private var userId: String?
+  /// Persisted opt-out wins; otherwise `init({ enabled })` decides and purges if false.
   private var enabled = true
   private var pending = 0
   private var inFlight = false
@@ -47,11 +48,16 @@ final class ShipstatCore {
 
   // MARK: - Public API (any thread)
 
-  func configure(_ cfg: ShipstatConfig, enabled: Bool, auto: [String: Any]) {
+  /// `extra` holds the context keys only JavaScript knows (sdk_version, ota).
+  func configure(_ cfg: ShipstatConfig, enabled: Bool, extra: [String: Any]) {
     queue.async {
       self.config = cfg
-      self.autoContext = auto
-      if self.defaults.object(forKey: "enabled") == nil { self.enabled = enabled }
+      for (k, v) in extra { self.autoContext[k] = v }
+      if self.defaults.object(forKey: "enabled") == nil, !enabled {
+        // Disabled from the start: drop what was tracked before init.
+        self.enabled = false
+        self.store.clear()
+      }
       self.pending = self.store.count()
       self.startTimer(intervalMs: cfg.flushIntervalMs)
       self.log("init, \(self.pending) waiting event(s)")
@@ -98,7 +104,7 @@ final class ShipstatCore {
 
   func setContext(_ ctx: [String: Any]) {
     queue.async {
-      for (k, v) in ctx { self.context[k] = v }
+      for (k, v) in Self.sanitize(ctx) { self.context[k] = v }
       self.saveContext()
     }
   }
@@ -117,10 +123,15 @@ final class ShipstatCore {
     }
   }
 
+  /// Opt-out also deletes what is waiting, so nothing tracked before is sent afterwards.
   func setEnabled(_ value: Bool) {
     queue.async {
       self.enabled = value
       self.defaults.set(value, forKey: "enabled")
+      if !value {
+        self.store.clear()
+        self.pending = 0
+      }
     }
   }
 
@@ -150,7 +161,41 @@ final class ShipstatCore {
 
   // MARK: - Internals (queue only)
 
+  /// Keeps JSON-safe primitives only: non-finite numbers and nested values are dropped.
+  static func sanitize(_ dict: [String: Any]) -> [String: Any] {
+    dict.filter { _, v in
+      if v is NSNull || v is String { return true }
+      if let n = v as? NSNumber { return n.doubleValue.isFinite }
+      return false
+    }
+  }
+
+  /// Context known natively from launch, so events tracked before `init` are complete.
+  static func baseContext() -> [String: Any] {
+    let info = Bundle.main.infoDictionary ?? [:]
+    let v = ProcessInfo.processInfo.operatingSystemVersion
+    var sys = utsname()
+    uname(&sys)
+    let machine = withUnsafePointer(to: &sys.machine) {
+      $0.withMemoryRebound(to: CChar.self, capacity: 1) { String(cString: $0) }
+    }
+    // On the simulator `machine` is the host arch; the simulated model is in the environment.
+    let model = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"] ?? machine
+    return [
+      "app_version": info["CFBundleShortVersionString"] as? String ?? "",
+      "build": info["CFBundleVersion"] as? String ?? "",
+      "platform": "ios",
+      "os_version": "\(v.majorVersion).\(v.minorVersion)" + (v.patchVersion > 0 ? ".\(v.patchVersion)" : ""),
+      "device_model": model,
+      "locale": Locale.preferredLanguages.first ?? Locale.current.identifier,
+      "sdk_version": sdkVersion,
+    ]
+  }
+
+  static let sdkVersion = "0.1.0"
+
   private func loadState() {
+    autoContext = Self.baseContext()
     if let id = defaults.string(forKey: "anonId") {
       anonId = id
     } else {
@@ -166,6 +211,7 @@ final class ShipstatCore {
   }
 
   private func saveContext() {
+    guard JSONSerialization.isValidJSONObject(context) else { return }
     if let data = try? JSONSerialization.data(withJSONObject: context) {
       defaults.set(data, forKey: "context")
     }
@@ -187,6 +233,10 @@ final class ShipstatCore {
   }
 
   private func flushIfNeeded(any: Bool = false) {
+    guard enabled else {
+      finishWaiters()
+      return
+    }
     guard let cfg = config, !inFlight else {
       if config == nil { finishWaiters() }
       return

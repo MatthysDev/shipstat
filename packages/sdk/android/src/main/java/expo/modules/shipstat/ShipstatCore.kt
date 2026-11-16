@@ -1,6 +1,7 @@
 package expo.modules.shipstat
 
 import android.content.Context
+import android.os.Build
 import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
@@ -31,6 +32,8 @@ internal data class ShipstatConfig(
 /** All state is touched only on [executor]. Public entry points enqueue and return. */
 internal class ShipstatCore private constructor(appContext: Context) {
   companion object {
+    const val SDK_VERSION = "0.1.0"
+
     @Volatile private var instance: ShipstatCore? = null
     fun get(context: Context): ShipstatCore =
       instance ?: synchronized(this) { instance ?: ShipstatCore(context.applicationContext).also { instance = it } }
@@ -58,24 +61,46 @@ internal class ShipstatCore private constructor(appContext: Context) {
   private val flushWaiters = ArrayList<() -> Unit>()
 
   init {
-    executor.execute { loadState() }
+    autoContext = baseContext(appContext)
+    run { loadState() }
+  }
+
+  /** Every task goes through here: an exception is logged, never thrown at the app. */
+  private fun run(block: () -> Unit) = executor.execute {
+    try {
+      block()
+    } catch (e: Exception) {
+      Log.w("shipstat", "internal error: ${e.message}")
+    }
   }
 
   // Public API (any thread)
 
-  fun configure(cfg: ShipstatConfig, enabledDefault: Boolean, auto: JSONObject) = executor.execute {
+  /** `extra` holds the context keys only JavaScript knows (sdk_version, ota). */
+  fun configure(cfg: ShipstatConfig, enabledDefault: Boolean, extra: Map<String, String>) = run {
     config = cfg
-    autoContext = auto
-    if (!prefs.contains("enabled")) enabled = enabledDefault
+    extra.forEach { (k, v) -> autoContext.put(k, v) }
+    if (!prefs.contains("enabled") && !enabledDefault) {
+      // Disabled from the start: drop what was tracked before init.
+      enabled = false
+      store.clear()
+    }
     pending = store.count()
     timer?.cancel(false)
-    timer = executor.scheduleWithFixedDelay({ flushIfNeeded(any = true) }, cfg.flushIntervalMs, cfg.flushIntervalMs, TimeUnit.MILLISECONDS)
+    // A periodic task that throws is cancelled for good: keep it exception-free.
+    timer = executor.scheduleWithFixedDelay({
+      try {
+        flushIfNeeded(any = true)
+      } catch (e: Exception) {
+        Log.w("shipstat", "flush failed: ${e.message}")
+      }
+    }, cfg.flushIntervalMs, cfg.flushIntervalMs, TimeUnit.MILLISECONDS)
     log("init, $pending waiting event(s)")
     flushIfNeeded()
   }
 
-  fun track(name: String, propsJson: String?, tsMs: Double) = executor.execute {
-    if (!enabled) return@execute
+  fun track(name: String, propsJson: String?, tsMs: Double) = run {
+    if (!enabled) return@run
     try {
       val ctx = JSONObject(context.toString())
       autoContext.keys().forEach { k -> ctx.put(k, autoContext.get(k)) }
@@ -101,27 +126,32 @@ internal class ShipstatCore private constructor(appContext: Context) {
     }
   }
 
-  fun setContext(values: Map<String, Any?>) = executor.execute {
-    values.forEach { (k, v) -> context.put(k, wrap(v)) }
+  fun setContext(values: Map<String, Any?>) = run {
+    values.forEach { (k, v) -> primitive(v)?.let { context.put(k, it) } }
     prefs.edit().putString("context", context.toString()).apply()
   }
 
-  fun unsetContext(keys: List<String>) = executor.execute {
+  fun unsetContext(keys: List<String>) = run {
     keys.forEach { context.remove(it) }
     prefs.edit().putString("context", context.toString()).apply()
   }
 
-  fun identify(id: String?) = executor.execute {
+  fun identify(id: String?) = run {
     userId = id
     prefs.edit().putString("userId", id).apply()
   }
 
-  fun setEnabled(value: Boolean) = executor.execute {
+  /** Opt-out also deletes what is waiting, so nothing tracked before is sent afterwards. */
+  fun setEnabled(value: Boolean) = run {
     enabled = value
     prefs.edit().putBoolean("enabled", value).apply()
+    if (!value) {
+      store.clear()
+      pending = 0
+    }
   }
 
-  fun reset() = executor.execute {
+  fun reset() = run {
     anonId = UUID.randomUUID().toString()
     context = JSONObject()
     userId = null
@@ -133,7 +163,13 @@ internal class ShipstatCore private constructor(appContext: Context) {
   fun flush(force: Boolean = true, done: (() -> Unit)? = null) = executor.execute {
     done?.let { flushWaiters.add(it) }
     if (force) nextAttemptAt = 0L
-    flushIfNeeded(any = true)
+    try {
+      flushIfNeeded(any = true)
+    } catch (e: Exception) {
+      inFlight = false
+      finishWaiters()
+      Log.w("shipstat", "flush failed: ${e.message}")
+    }
   }
 
   // Internals (executor only)
@@ -155,7 +191,7 @@ internal class ShipstatCore private constructor(appContext: Context) {
 
   private fun flushIfNeeded(any: Boolean = false) {
     val cfg = config
-    if (cfg == null) { finishWaiters(); return }
+    if (cfg == null || !enabled) { finishWaiters(); return }
     if (inFlight) return
     if (pending <= 0 || (!any && pending < cfg.flushAt) || System.currentTimeMillis() < nextAttemptAt) {
       finishWaiters(); return
@@ -189,7 +225,15 @@ internal class ShipstatCore private constructor(appContext: Context) {
       } catch (e: Exception) {
         error = e.message ?: e.javaClass.simpleName
       }
-      executor.execute { onResponse(rows.size, lastSeq, status, retryAfter, error) }
+      executor.execute {
+        try {
+          onResponse(rows.size, lastSeq, status, retryAfter, error)
+        } catch (e: Exception) {
+          inFlight = false
+          finishWaiters()
+          Log.w("shipstat", "send bookkeeping failed: ${e.message}")
+        }
+      }
     }
   }
 
@@ -216,11 +260,30 @@ internal class ShipstatCore private constructor(appContext: Context) {
   }
 
 
-  private fun wrap(v: Any?): Any = when (v) {
+  /** JSON-safe primitive, or null to drop the value (non-finite numbers, nested values). */
+  private fun primitive(v: Any?): Any? = when (v) {
     null -> JSONObject.NULL
-    is List<*> -> JSONArray().also { a -> v.forEach { a.put(wrap(it)) } }
-    is Double -> if (v % 1.0 == 0.0 && kotlin.math.abs(v) < 9.0E15) v.toLong() else v
-    else -> v
+    is String, is Boolean -> v
+    is Double -> if (!v.isFinite()) null else if (v % 1.0 == 0.0 && kotlin.math.abs(v) < 9.0E15) v.toLong() else v
+    is Float -> if (!v.isFinite()) null else v.toDouble()
+    is Number -> v
+    else -> null
+  }
+
+  /** Context known natively from launch, so events tracked before `init` are complete. */
+  private fun baseContext(ctx: Context): JSONObject {
+    val info = try { ctx.packageManager.getPackageInfo(ctx.packageName, 0) } catch (_: Exception) { null }
+    val build = info?.let {
+      if (Build.VERSION.SDK_INT >= 28) it.longVersionCode.toString() else @Suppress("DEPRECATION") it.versionCode.toString()
+    } ?: ""
+    return JSONObject()
+      .put("app_version", info?.versionName ?: "")
+      .put("build", build)
+      .put("platform", "android")
+      .put("os_version", Build.VERSION.RELEASE ?: "")
+      .put("device_model", "${Build.MANUFACTURER} ${Build.MODEL}")
+      .put("locale", Locale.getDefault().toLanguageTag())
+      .put("sdk_version", SDK_VERSION)
   }
 
   private fun log(msg: String) {

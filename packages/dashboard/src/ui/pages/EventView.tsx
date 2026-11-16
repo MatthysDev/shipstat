@@ -77,7 +77,8 @@ export function EventView({ name: routeName, range, setRange, filters, setFilter
         </div>
       </div>
       {res.error && <div className="err">{res.error}</div>}
-      {d && name && (
+      {res.loading && <div className="loading inline">Updating…</div>}
+      {d && name && !res.loading && (
         <>
           <div className="card" style={{ marginBottom: 16 }}>
             <div className="card-head">
