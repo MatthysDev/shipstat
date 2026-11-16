@@ -116,7 +116,7 @@ export default function App() {
         {booting ? (
           <div className="loading">{booting}</div>
         ) : needsData ? (
-          <Empty />
+          <Empty waiting={!!loaded.live} />
         ) : (
           <>
             {route.page === 'boards' && <Boards id={route.id} version={loaded.version} />}
@@ -131,7 +131,16 @@ export default function App() {
   );
 }
 
-function Empty() {
+function Empty({ waiting }: { waiting: boolean }) {
+  if (waiting) {
+    return (
+      <div className="card empty">
+        <h2><span className="dot live" />Waiting for your first event</h2>
+        <p>This dashboard is connected to its server and updates live. Send an event from your app and it shows up here within a couple of seconds.</p>
+        <pre className="code" style={{ display: 'inline-block', textAlign: 'left' }}>{`Shipstat.init({ endpoint: '${location.origin}/events' });\nShipstat.track('app_opened');`}</pre>
+      </div>
+    );
+  }
   return (
     <div className="card empty">
       <h2>No events loaded yet</h2>

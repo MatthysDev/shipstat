@@ -47,6 +47,8 @@ One command: it receives events on `:8787/events`, stores them in `shipstat-even
 | Android emulator | `http://10.0.2.2:8787/events` |
 | A device on your Wi-Fi | `http://<your-lan-ip>:8787/events` (printed at start) |
 
+Set context **before** the first `track()`: React runs child effects before parent effects, so a `setContext` inside a top-level `useEffect` misses the first events of your screens. Call it at module level or in a `useState` initializer.
+
 In production, point `endpoint` at your own API and add your auth header: `init({ endpoint, headers: { Authorization: … } })`. It needs a development build or bare React Native; it does not run in Expo Go.
 
 ## Examples

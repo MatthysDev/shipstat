@@ -8,6 +8,7 @@ export interface Slice {
 
 /** Donut with a legend. Slices past the 5th are grouped as "other". */
 export function Donut({ slices, size = 160 }: { slices: Slice[]; size?: number }) {
+  if (!slices.some((s) => s.value > 0)) return <p className="muted">No data yet.</p>;
   const sorted = [...slices].sort((a, b) => b.value - a.value);
   const shown = sorted.slice(0, 5);
   const rest = sorted.slice(5).reduce((s, x) => s + x.value, 0);
