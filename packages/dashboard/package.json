@@ -1,6 +1,6 @@
 {
   "name": "shipstat-dashboard",
-  "private": true,
+  "private": false,
   "version": "0.1.0",
   "type": "module",
   "scripts": {
@@ -28,5 +28,26 @@
     "vitest": "^5.1.0"
   },
   "description": "Shipstat dashboard: static site, events analysed in the browser with DuckDB",
-  "license": "MIT"
+  "license": "MIT",
+  "bin": {
+    "shipstat-dashboard": "bin/shipstat-dashboard.mjs"
+  },
+  "files": [
+    "bin",
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MatthysDev/shipstat.git",
+    "directory": "packages/dashboard"
+  },
+  "keywords": [
+    "analytics",
+    "react-native",
+    "expo",
+    "dashboard",
+    "duckdb",
+    "ab-testing",
+    "self-hosted"
+  ]
 }

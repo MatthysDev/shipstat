@@ -207,7 +207,7 @@ function Results({ exp, version, onEdit }: { exp: Experiment; version: number; o
 
       <div className="grid" style={{ gridTemplateColumns: `repeat(${d.arms.length}, minmax(0,1fr)) minmax(0,1.2fr)`, marginBottom: 16 }}>
         {d.arms.map((a, i) => (
-          <div key={a.v} className="card" style={a.v === best?.arm.key ? { borderColor: 'var(--accent)' } : undefined}>
+          <div key={a.v} className="card" style={win && a.v === best?.arm.key ? { borderColor: 'var(--accent)' } : undefined}>
             <div className="ev" style={{ fontWeight: 600 }}><i style={{ width: 10, height: 10, borderRadius: 3, display: 'inline-block', background: color(i) }} />{a.v}{a.v === exp.control && <span className="faint"> · control</span>}</div>
             <div className="big">{fmtPct(a.exposed ? a.converted / a.exposed : 0)}</div>
             <div className="muted">conversion</div>
@@ -217,12 +217,12 @@ function Results({ exp, version, onEdit }: { exp: Experiment; version: number; o
         {best && (
           <div className="card">
             <h2>{best.arm.key} vs {best.control.key}</h2>
-            <div className="big" style={{ color: win ? 'var(--good)' : lose ? 'var(--bad)' : 'var(--text)' }}>{fmtSignedPct(best.uplift)}</div>
+            <div className="big" style={{ color: win ? 'var(--accent)' : 'var(--text)' }}>{fmtSignedPct(best.uplift)}</div>
             <div className="muted">95 % interval: {fmtSignedPct(best.upliftLow)} to {fmtSignedPct(best.upliftHigh)}</div>
             <div className="ci">
               <div className="zero" style={{ left: `${pos(0)}%` }} />
-              <div className="range" style={{ left: `${pos(best.upliftLow)}%`, width: `${Math.max(1, pos(best.upliftHigh) - pos(best.upliftLow))}%`, background: win ? '#9ad9bd' : lose ? '#f3b9a0' : '#f0d6a2' }} />
-              <div className="pt" style={{ left: `${pos(best.uplift)}%`, background: win ? '#0e8a5f' : lose ? '#c2410c' : '#d4900f' }} />
+              <div className="range" style={{ left: `${pos(best.upliftLow)}%`, width: `${Math.max(1, pos(best.upliftHigh) - pos(best.upliftLow))}%`, background: win ? 'var(--accent-soft)' : 'var(--line)' }} />
+              <div className="pt" style={{ left: `${pos(best.uplift)}%`, background: win ? 'var(--accent)' : 'var(--text)' }} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--faint)', fontSize: 11 }}><span>−50 %</span><span>0</span><span>+50 %</span><span>+100 %</span></div>
           </div>

@@ -1,7 +1,7 @@
 import { breakdown, funnel, series, total } from '../../data/queries';
 import { period } from '../../data/sql';
 import type { Widget } from '../../lib/boards';
-import { fmtCompact, fmtInt, fmtSignedPct } from '../../lib/format';
+import { fmtChange, fmtCompact, fmtInt } from '../../lib/format';
 import { Bars } from '../charts/Bars';
 import { Donut } from '../charts/Donut';
 import { Funnel } from '../charts/Funnel';
@@ -25,7 +25,7 @@ export function WidgetView({ w, version, height = 220 }: { w: Widget; version: n
         <div className="number-widget">
           <div className="kpi-value">{w.metric === 'per_user' ? d.value.toFixed(1) : fmtCompact(d.value)}</div>
           <div className={delta === null ? 'delta' : delta >= 0 ? 'delta up' : 'delta down'}>
-            {delta === null ? <span>no previous period</span> : <>{fmtSignedPct(delta, 1)} <span>vs previous {w.range}</span></>}
+            {delta === null ? <span>no previous period</span> : <>{fmtChange(delta)} <span>vs previous {w.range}</span></>}
           </div>
           <Sparkline values={d.spark} />
         </div>

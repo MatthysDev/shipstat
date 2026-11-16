@@ -5,7 +5,7 @@ import { syncApi, syncSupabase, type ApiSource, type SupabaseSource } from '../.
 import { demoEvents } from '../../lib/demo';
 import { fmtAgo, fmtInt } from '../../lib/format';
 import { readJson, writeJson } from '../../lib/storage';
-import type { Loaded } from '../App';
+import type { LiveControl, Loaded } from '../App';
 
 type Tab = 'api' | 'file' | 'supabase' | 'demo';
 
@@ -27,13 +27,13 @@ const SDK_SNIPPET = `npx expo install shipstat
 
 import Shipstat from 'shipstat';
 
-Shipstat.init({
-  endpoint: 'https://api.example.com/events',
-  headers: { Authorization: \`Bearer \${token}\` },
-});
+Shipstat.init({ endpoint: 'http://localhost:8787/events' });
 
-Shipstat.setContext({ variant: 'B', feature: 'paywall_v2' });
+Shipstat.setContext({ variant: 'B' });
 Shipstat.track('paywall_viewed', { placement: 'onboarding_end' });`;
+
+const LOCAL_SNIPPET = `npx shipstat-dashboard
+# receives events on :8787/events and serves this dashboard, live`;
 
 const PAYLOAD_SNIPPET = `POST /events
 { "schema": 1, "sent_at": "…", "events": [{
@@ -50,7 +50,7 @@ pnpm --filter shipstat-dashboard build
 docker build -t shipstat-dashboard -f packages/dashboard/Dockerfile .
 docker run -p 8080:80 shipstat-dashboard`;
 
-export function DataView({ loaded, onLoaded }: { loaded: Loaded; onLoaded: (source?: string) => Promise<void> }) {
+export function DataView({ loaded, onLoaded, live }: { loaded: Loaded; onLoaded: (source?: string) => Promise<void>; live: LiveControl }) {
   const [saved, setSaved] = useState<Saved>(() => readJson(KEY, DEFAULTS, isSaved));
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -108,12 +108,14 @@ export function DataView({ loaded, onLoaded }: { loaded: Loaded; onLoaded: (sour
         <section>
           <p className="sec-title">1 · Send events from your app</p>
           <div className="card">
-            <h2>The module posts batches to your API</h2>
-            <p className="muted lead">Native (Swift / Kotlin): events are written to disk and sent in the background, with your own headers.</p>
+            <h2>Three lines in your app</h2>
+            <p className="muted lead">Native (Swift / Kotlin): events are written to disk and sent in batches in the background.</p>
             <pre className="code">{SDK_SNIPPET}</pre>
+            <p className="sec-title" style={{ marginTop: 18 }}>No backend yet</p>
+            <pre className="code">{LOCAL_SNIPPET}</pre>
             <p className="sec-title" style={{ marginTop: 18 }}>What your API receives</p>
             <pre className="code">{PAYLOAD_SNIPPET}</pre>
-            <p className="faint small">No API yet? <code>examples/dev-server</code> receives and serves events in one file.</p>
+            <p className="faint small">In production, point <code>endpoint</code> at your own API and add your auth header.</p>
           </div>
         </section>
 
@@ -132,7 +134,14 @@ export function DataView({ loaded, onLoaded }: { loaded: Loaded; onLoaded: (sour
                   <label className="field">Value<input className="input" type="password" autoComplete="off" value={saved.api.headerValue} onChange={(e) => update({ api: { ...saved.api, headerValue: e.target.value } })} placeholder="Bearer …" /></label>
                 </div>
                 <p className="faint small">Called as <code>GET url?since=&lt;cursor&gt;&amp;limit=5000</code>, returning <code>{'{ events, next_cursor }'}</code>. Saved in this browser only.</p>
-                <button className="btn primary" type="submit" disabled={!!busy || !saved.api.url}>Load</button>
+                <div className="row-actions">
+                  <button className="btn primary" type="submit" disabled={!!busy || !saved.api.url}>Load</button>
+                  {loaded.live ? (
+                    <button className="btn" type="button" onClick={live.stop}><span className="dot live" />Stop live</button>
+                  ) : (
+                    <button className="btn" type="button" disabled={!!busy || !saved.api.url} onClick={() => live.start(saved.api, host(saved.api.url))}>Follow live</button>
+                  )}
+                </div>
               </form>
             )}
 

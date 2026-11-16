@@ -1,12 +1,12 @@
 // Builds docs/perf/results.json and docs/perf/latency.svg from the Perf lab reports
-// collected by examples/dev-server (bench-results.ndjson). Release builds only; every
+// saved by shipstat-dashboard (bench-results.ndjson, next to its data file). Release builds only; every
 // number is the median across all runs of a platform.
 //
 //   node scripts/perf-report.mjs /tmp/bench-results.ndjson
 import fs from 'node:fs';
 import path from 'node:path';
 
-const input = process.argv[2] ?? 'examples/dev-server/bench-results.ndjson';
+const input = process.argv[2] ?? 'bench-results.ndjson';
 const outDir = path.resolve('docs/perf');
 const reports = fs.readFileSync(input, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l));
 

@@ -5,10 +5,10 @@ import Shipstat from 'shipstat';
 import { runAll, type Report } from './src/bench';
 import { NaiveSdk } from './src/naiveSdk';
 
-// The example talks to examples/dev-server on the host machine.
+// The example sends to `npx shipstat-dashboard` running on the host machine.
 const HOST = Platform.OS === 'android' ? '10.0.2.2' : '127.0.0.1';
 const SERVER = `http://${HOST}:8787`;
-const HEADERS = { Authorization: 'Bearer dev-token' };
+const HEADERS: Record<string, string> = {};
 
 Shipstat.init({ endpoint: `${SERVER}/events`, headers: HEADERS, flushIntervalMs: 5000, debug: __DEV__ });
 NaiveSdk.init(`${SERVER}/events`);
@@ -83,7 +83,7 @@ function PerfLab() {
     const r = await runAll({ healthUrl: `${SERVER}/health`, headers: HEADERS, onStep: setStep });
     setStep(null);
     setReport(r);
-    // Collected by examples/dev-server into bench-results.ndjson.
+    // Saved by shipstat-dashboard into bench-results.ndjson, next to its data file.
     fetch(`${SERVER}/bench`, { method: 'POST', headers: { ...HEADERS, 'Content-Type': 'application/json' }, body: JSON.stringify(r) }).catch(() => undefined);
   };
 

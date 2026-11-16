@@ -1,3 +1,2 @@
-export const PALETTE = ['#4f46e5', '#0e9f6e', '#e8833a', '#d946ef', '#0891b2', '#b3b3bb'];
-
-export const color = (i: number) => PALETTE[i % PALETTE.length];
+/** Series colors are CSS variables, so charts follow the light or dark theme. */
+export const color = (i: number) => `var(--s${i % 6})`;

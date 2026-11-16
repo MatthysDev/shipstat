@@ -19,6 +19,11 @@ export function fmtSignedPct(x: number, digits = 0): string {
   return (x > 0 ? '+' : x < 0 ? '−' : '') + v.replace('-', '') + ' %';
 }
 
+/** Change without sign: the arrow drawn by `.delta.up` / `.delta.down` carries the direction. */
+export function fmtChange(x: number, digits = 1): string {
+  return Math.abs(x * 100).toFixed(digits) + ' %';
+}
+
 export function fmtDay(d: Date): string {
   return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 }

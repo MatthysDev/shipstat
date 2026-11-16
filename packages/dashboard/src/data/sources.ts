@@ -21,11 +21,12 @@ export interface SyncResult {
  * Reads every page from a Shipstat read endpoint: GET url?since=<cursor>&limit=5000
  * → { events, next_cursor, cursor? }. Duplicates are ignored, so reloading is safe.
  */
-export async function syncApi(src: ApiSource, onProgress?: (n: number) => void): Promise<SyncResult> {
-  let cursor = '';
+export async function syncApi(src: ApiSource, onProgress?: (n: number) => void, from = ''): Promise<SyncResult> {
+  let cursor = from;
   let added = 0;
   for (let page = 0; page < 10_000; page++) {
-    const u = new URL(src.url);
+    // Relative URLs work too: a dashboard served by shipstat-dashboard reads its own server.
+    const u = new URL(src.url, location.href);
     if (cursor) u.searchParams.set('since', cursor);
     u.searchParams.set('limit', '5000');
     const headers: Record<string, string> = {};

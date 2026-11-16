@@ -16,7 +16,7 @@ export function Sidebar({ route, loaded }: { route: Route; loaded: Loaded }) {
     <aside className="side">
       <a className="brand" href="#boards">
         <span className="brand-mark">
-          <svg width="14" height="14" viewBox="0 0 14 14"><rect x="1" y="7" width="3" height="6" rx="1" fill="#fff" /><rect x="5.5" y="4" width="3" height="9" rx="1" fill="#fff" /><rect x="10" y="1" width="3" height="12" rx="1" fill="#fff" /></svg>
+          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden><rect x="1" y="6" width="2.4" height="5" rx=".6" fill="currentColor" /><rect x="4.8" y="3.5" width="2.4" height="7.5" rx=".6" fill="currentColor" /><rect x="8.6" y="1" width="2.4" height="10" rx=".6" fill="currentColor" /></svg>
         </span>
         Shipstat
       </a>
@@ -30,13 +30,19 @@ export function Sidebar({ route, loaded }: { route: Route; loaded: Loaded }) {
         </div>
       ))}
       <div className="side-foot">
+        {loaded.live && (
+          <div className="live-tag">
+            <span className="dot live" />
+            Live
+            {loaded.lastAdded ? <span key={loaded.version} className="flash">+{fmtInt(loaded.lastAdded)}</span> : null}
+          </div>
+        )}
         {loaded.count > 0 ? (
           <>
-            <span className="dot" />
-            {fmtInt(loaded.count)} events loaded
-            {loaded.source && <><br />from <span className="mono">{loaded.source}</span></>}
+            <b className="mono">{fmtInt(loaded.count)}</b> events
+            {loaded.source && <> · <span className="mono">{loaded.source}</span></>}
             <br />
-            Analysed in your browser{loaded.at ? ` · ${fmtAgo(loaded.at)}` : ''}
+            In your browser{loaded.at ? ` · ${fmtAgo(loaded.at)}` : ''}
           </>
         ) : (
           'Nothing loaded. Your data never leaves your browser.'

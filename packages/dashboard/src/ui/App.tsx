@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
-import { restoreCache } from '../data/cache';
-import { countEvents } from '../data/db';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { restoreCache, saveCache } from '../data/cache';
+import { countEvents, stitchIdentities } from '../data/db';
+import { readServerConfig, startLive } from '../data/live';
+import { syncApi, type ApiSource } from '../data/sources';
 import type { Filters, Range } from '../data/sql';
 import { parseHash, type Route } from '../lib/router';
 import { Boards } from './pages/Boards';
@@ -16,6 +18,15 @@ export interface Loaded {
   version: number;
   source?: string;
   at?: Date;
+  /** Polling the source for new events. */
+  live?: boolean;
+  /** Events added by the last live update, for a short highlight. */
+  lastAdded?: number;
+}
+
+export interface LiveControl {
+  start: (src: ApiSource, label: string) => void;
+  stop: () => void;
 }
 
 export default function App() {
@@ -23,7 +34,7 @@ export default function App() {
   const [range, setRange] = useState<Range>('30d');
   const [filters, setFilters] = useState<Filters>({});
   const [loaded, setLoaded] = useState<Loaded>({ count: 0, version: 0 });
-  const [booting, setBooting] = useState(true);
+  const [booting, setBooting] = useState<string | null>('Starting DuckDB…');
 
   useEffect(() => {
     const on = () => setRoute(parseHash(location.hash));
@@ -36,12 +47,55 @@ export default function App() {
     setLoaded((l) => ({ count, version: l.version + 1, source: source ?? l.source, at }));
   }, []);
 
-  // Restore the events kept from the previous visit.
+  const stopLive = useRef<(() => void) | null>(null);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  const live: LiveControl = {
+    start: (src, label) => {
+      stopLive.current?.();
+      setLoaded((l) => ({ ...l, live: true }));
+      // From the start of the source: the first tick catches up, duplicates are ignored.
+      stopLive.current = startLive(
+        src,
+        '',
+        async (added) => {
+          await stitchIdentities();
+          const count = await countEvents();
+          setLoaded((l) => ({ ...l, count, version: l.version + 1, source: label, at: new Date(), lastAdded: added }));
+          // Keep the browser copy current without writing it on every tick.
+          clearTimeout(saveTimer.current);
+          saveTimer.current = setTimeout(() => saveCache(label), 5000);
+        },
+        () => undefined
+      );
+    },
+    stop: () => {
+      stopLive.current?.();
+      stopLive.current = null;
+      setLoaded((l) => ({ ...l, live: false }));
+    },
+  };
+
+  // Restore the events kept from the previous visit, then, when served by
+  // `shipstat-dashboard`, connect to that server and follow it live.
   useEffect(() => {
-    restoreCache()
-      .then((meta) => (meta ? refresh(meta.source, new Date(meta.savedAt)) : undefined))
-      .finally(() => setBooting(false));
-  }, [refresh]);
+    (async () => {
+      const meta = await restoreCache();
+      if (meta) await refresh(meta.source, new Date(meta.savedAt));
+      const server = await readServerConfig();
+      if (server) {
+        const label = server.name ?? location.host;
+        setBooting(`Loading events from ${label}…`);
+        await syncApi(server.source, (n) => setBooting(`Loading events from ${label}… ${n.toLocaleString('en-US')}`));
+        await stitchIdentities();
+        await refresh(label);
+        if (server.live) live.start(server.source, label);
+      }
+      setBooting(null);
+    })().catch(() => setBooting(null));
+    return () => stopLive.current?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const needsData = loaded.count === 0 && route.page !== 'data';
   const shared = { range, setRange, filters, setFilters, version: loaded.version };
@@ -51,7 +105,7 @@ export default function App() {
       <Sidebar route={route} loaded={loaded} />
       <main className="main">
         {booting ? (
-          <div className="loading">Starting DuckDB…</div>
+          <div className="loading">{booting}</div>
         ) : needsData ? (
           <Empty />
         ) : (
@@ -60,7 +114,7 @@ export default function App() {
             {route.page === 'overview' && <Overview {...shared} />}
             {route.page === 'event' && <EventView name={route.name} {...shared} />}
             {route.page === 'experiments' && <Experiments version={loaded.version} />}
-            {route.page === 'data' && <DataView loaded={loaded} onLoaded={refresh} />}
+            {route.page === 'data' && <DataView loaded={loaded} onLoaded={refresh} live={live} />}
           </>
         )}
       </main>

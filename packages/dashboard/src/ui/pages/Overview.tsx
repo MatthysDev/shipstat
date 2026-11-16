@@ -1,6 +1,6 @@
 import { series, topEvents, topVersion, total } from '../../data/queries';
 import { period, type Filters, type Range } from '../../data/sql';
-import { fmtCompact, fmtInt, fmtPct, fmtSignedPct } from '../../lib/format';
+import { fmtChange, fmtCompact, fmtInt, fmtPct } from '../../lib/format';
 import { go } from '../../lib/router';
 import { Bars } from '../charts/Bars';
 import { Legend } from '../charts/Legend';
@@ -18,7 +18,7 @@ interface Props {
 function Delta({ cur, prev }: { cur: number; prev: number }) {
   if (!prev) return <div className="delta"><span>no previous data</span></div>;
   const d = cur / prev - 1;
-  return <div className={d >= 0 ? 'delta up' : 'delta down'}>{fmtSignedPct(d, 1)} <span>vs previous period</span></div>;
+  return <div className={d >= 0 ? 'delta up' : 'delta down'}>{fmtChange(d)} <span>vs previous period</span></div>;
 }
 
 export function Overview({ range, setRange, filters, setFilters, version }: Props) {
@@ -77,7 +77,7 @@ export function Overview({ range, setRange, filters, setFilters, version }: Prop
                       <td className="num">{fmtInt(e.total)}</td>
                       <td className="num">{fmtInt(e.users)}</td>
                       <td className="bar-cell"><div className="mini-bar"><div style={{ width: `${Math.max(1.5, (e.total / maxTotal) * 100)}%` }} /></div></td>
-                      <td className="num">{trend === null ? <span className="faint">new</span> : <span className={trend >= 0 ? 'delta up' : 'delta down'}>{fmtSignedPct(trend)}</span>}</td>
+                      <td className="num">{trend === null ? <span className="faint">new</span> : <span className={trend >= 0 ? 'delta up' : 'delta down'}>{fmtChange(trend, 0)}</span>}</td>
                       <td className="faint mono">{e.keys || '—'}</td>
                     </tr>
                   );

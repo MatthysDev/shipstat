@@ -80,8 +80,8 @@ Cost of one call, in microseconds:
 ## Reproduce
 
 ```sh
-node examples/dev-server/server.mjs --token dev-token          # collects reports in bench-results.ndjson
+npx shipstat-dashboard                                          # saves reports in bench-results.ndjson
 cd apps/example && npx expo run:ios --configuration Release     # or: npx expo run:android --variant release
 # In the app: Perf lab → Run benchmark (as many runs as you like)
-node scripts/perf-report.mjs examples/dev-server/bench-results.ndjson
+node scripts/perf-report.mjs bench-results.ndjson
 ```

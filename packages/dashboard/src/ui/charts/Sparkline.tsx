@@ -1,6 +1,6 @@
 import { useWidth } from './useWidth';
 
-export function Sparkline({ values, height = 36, stroke = 'var(--accent)' }: { values: number[]; height?: number; stroke?: string }) {
+export function Sparkline({ values, height = 36, stroke = 'var(--s2)' }: { values: number[]; height?: number; stroke?: string }) {
   const { ref, width } = useWidth(200);
   if (values.length < 2) return <div ref={ref} style={{ height }} />;
   const max = Math.max(1e-9, ...values);
