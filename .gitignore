@@ -8,3 +8,8 @@ apps/example/ios/
 apps/example/android/
 
 apps/site/dist/
+examples/playground/node_modules/
+examples/playground/ios/
+examples/playground/android/
+examples/playground/shipstat-events.ndjson
+*.tgz
