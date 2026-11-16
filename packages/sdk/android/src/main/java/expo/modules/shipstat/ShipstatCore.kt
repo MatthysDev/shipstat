@@ -74,7 +74,7 @@ internal class ShipstatCore private constructor(appContext: Context) {
     flushIfNeeded()
   }
 
-  fun track(name: String, props: Map<String, Any?>?, tsMs: Double) = executor.execute {
+  fun track(name: String, propsJson: String?, tsMs: Double) = executor.execute {
     if (!enabled) return@execute
     try {
       val ctx = JSONObject(context.toString())
@@ -85,14 +85,15 @@ internal class ShipstatCore private constructor(appContext: Context) {
         .put("ts", iso.format(Date(tsMs.toLong())))
         .put("anon_id", anonId)
         .put("user_id", userId ?: JSONObject.NULL)
-        .put("props", toJson(props ?: emptyMap<String, Any?>()))
+        .put("props", if (propsJson.isNullOrEmpty()) JSONObject() else JSONObject(propsJson))
         .put("context", ctx)
       store.insert(event.toString())
       pending += 1
+      // Trim in chunks: once over the cap by 10 % (min 100), drop the oldest back to the cap.
       val maxSize = config?.maxQueueSize ?: 10_000
-      if (pending > maxSize) {
+      if (pending > maxSize + max(100, maxSize / 10)) {
         store.trimTo(maxSize)
-        pending = maxSize
+        pending = store.count()
       }
       if (pending >= (config?.flushAt ?: 50)) flushIfNeeded()
     } catch (e: Exception) {
@@ -196,13 +197,13 @@ internal class ShipstatCore private constructor(appContext: Context) {
     inFlight = false
     if (error == null && status in 200..299) {
       store.deleteUpTo(lastSeq)
-      pending = max(0, pending - count)
+      pending = store.count()
       failures = 0
       log("sent $count event(s)")
       if (pending > 0) { flushIfNeeded(any = true); return }
     } else if (error == null && status in 400..499 && status != 408 && status != 429) {
       store.deleteUpTo(lastSeq)
-      pending = max(0, pending - count)
+      pending = store.count()
       log("dropped $count event(s): HTTP $status")
     } else {
       failures += 1
@@ -214,11 +215,6 @@ internal class ShipstatCore private constructor(appContext: Context) {
     finishWaiters()
   }
 
-  private fun toJson(map: Map<String, Any?>): JSONObject {
-    val o = JSONObject()
-    map.forEach { (k, v) -> o.put(k, wrap(v)) }
-    return o
-  }
 
   private fun wrap(v: Any?): Any = when (v) {
     null -> JSONObject.NULL

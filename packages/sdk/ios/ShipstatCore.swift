@@ -59,9 +59,14 @@ final class ShipstatCore {
     }
   }
 
-  func track(name: String, props: [String: Any]?, tsMs: Double) {
+  func track(name: String, propsJson: String?, tsMs: Double) {
     queue.async {
       guard self.enabled else { return }
+      var props: [String: Any] = [:]
+      if let json = propsJson, let data = json.data(using: .utf8),
+         let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+        props = obj
+      }
       var ctx = self.context
       for (k, v) in self.autoContext { ctx[k] = v }
       let event: [String: Any] = [
@@ -70,7 +75,7 @@ final class ShipstatCore {
         "ts": self.isoFormatter.string(from: Date(timeIntervalSince1970: tsMs / 1000)),
         "anon_id": self.anonId,
         "user_id": self.userId ?? NSNull(),
-        "props": props ?? [:],
+        "props": props,
         "context": ctx,
       ]
       guard JSONSerialization.isValidJSONObject(event),
@@ -81,10 +86,11 @@ final class ShipstatCore {
       }
       self.store.insert(body)
       self.pending += 1
-      let max = self.config?.maxQueueSize ?? 10_000
-      if self.pending > max {
-        self.store.trim(to: max)
-        self.pending = max
+      // Trim in chunks: once over the cap by 10 % (min 100), drop the oldest back to the cap.
+      let cap = self.config?.maxQueueSize ?? 10_000
+      if self.pending > cap + Swift.max(100, cap / 10) {
+        self.store.trim(to: cap)
+        self.pending = self.store.count()
       }
       if self.pending >= (self.config?.flushAt ?? 50) { self.flushIfNeeded() }
     }
@@ -209,13 +215,13 @@ final class ShipstatCore {
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
         if error == nil, (200..<300).contains(status) {
           self.store.delete(upTo: last.seq)
-          self.pending = max(0, self.pending - rows.count)
+          self.pending = self.store.count()
           self.failures = 0
           self.log("sent \(rows.count) event(s)")
           if self.pending > 0 { self.flushIfNeeded(any: true); return }
         } else if (400..<500).contains(status), status != 408, status != 429 {
           self.store.delete(upTo: last.seq)
-          self.pending = max(0, self.pending - rows.count)
+          self.pending = self.store.count()
           self.log("dropped \(rows.count) event(s): HTTP \(status)")
         } else {
           self.failures += 1

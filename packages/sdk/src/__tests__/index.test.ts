@@ -47,7 +47,7 @@ describe('init', () => {
 describe('track', () => {
   it('forwards name, props and a timestamp', () => {
     Shipstat.track('paywall_viewed', { placement: 'onboarding_end' });
-    expect(mockNative.track).toHaveBeenCalledWith('paywall_viewed', { placement: 'onboarding_end' }, expect.any(Number));
+    expect(mockNative.track).toHaveBeenCalledWith('paywall_viewed', '{"placement":"onboarding_end"}', expect.any(Number));
   });
 
   it('sends null props when none are given', () => {

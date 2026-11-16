@@ -14,7 +14,7 @@ export type NativeConfig = {
 
 declare class ShipstatNativeModule extends NativeModule<{}> {
   init(config: NativeConfig): void;
-  track(name: string, props: Record<string, unknown> | null, tsMs: number): void;
+  track(name: string, propsJson: string | null, tsMs: number): void;
   setContext(ctx: Record<string, unknown>): void;
   unsetContext(keys: string[]): void;
   identify(userId: string | null): void;

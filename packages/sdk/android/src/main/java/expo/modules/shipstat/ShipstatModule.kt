@@ -29,8 +29,8 @@ class ShipstatModule : Module() {
       core.configure(config, cfg["enabled"] as? Boolean ?: true, autoContext(cfg))
     }
 
-    Function("track") { name: String, props: Map<String, Any?>?, tsMs: Double ->
-      core.track(name, props, tsMs)
+    Function("track") { name: String, propsJson: String?, tsMs: Double ->
+      core.track(name, propsJson, tsMs)
     }
 
     Function("setContext") { ctx: Map<String, Any?> -> core.setContext(ctx) }

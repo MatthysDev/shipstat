@@ -72,9 +72,10 @@ final class EventStore {
   /// Keeps only the newest `max` events.
   func trim(to max: Int) {
     var stmt: OpaquePointer?
-    let sql = "DELETE FROM events WHERE seq NOT IN (SELECT seq FROM events ORDER BY seq DESC LIMIT ?);"
+    // Uses the primary key index, no full scan.
+    let sql = "DELETE FROM events WHERE seq < (SELECT seq FROM events ORDER BY seq DESC LIMIT 1 OFFSET ?);"
     guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
-    sqlite3_bind_int64(stmt, 1, Int64(max))
+    sqlite3_bind_int64(stmt, 1, Int64(max - 1))
     sqlite3_step(stmt)
     sqlite3_finalize(stmt)
   }

@@ -18,8 +18,8 @@ public class ShipstatModule: Module {
       ShipstatCore.shared.configure(config, enabled: cfg["enabled"] as? Bool ?? true, auto: Self.autoContext(cfg))
     }
 
-    Function("track") { (name: String, props: [String: Any]?, tsMs: Double) in
-      ShipstatCore.shared.track(name: name, props: props, tsMs: tsMs)
+    Function("track") { (name: String, propsJson: String?, tsMs: Double) in
+      ShipstatCore.shared.track(name: name, propsJson: propsJson, tsMs: tsMs)
     }
 
     Function("setContext") { (ctx: [String: Any]) in

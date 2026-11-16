@@ -34,7 +34,8 @@ export function track(name: string, props?: Props): void {
     const errors = checkEvent(name, props);
     if (errors.length) return warn(errors);
   }
-  Native.track(name, props ?? null, Date.now());
+  // Props cross the bridge as one JSON string: much cheaper than converting an object key by key.
+  Native.track(name, props ? JSON.stringify(props) : null, Date.now());
 }
 
 /** Merge keys into the global context added to every following event. Persisted across launches. */

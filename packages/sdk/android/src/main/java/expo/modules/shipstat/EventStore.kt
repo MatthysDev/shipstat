@@ -39,10 +39,11 @@ internal class EventStore(context: Context) :
     writableDatabase.delete("events", "seq <= ?", arrayOf(seq.toString()))
   }
 
+  /** Keeps only the newest `max` events. Uses the primary key index, no full scan. */
   fun trimTo(max: Int) {
     writableDatabase.execSQL(
-      "DELETE FROM events WHERE seq NOT IN (SELECT seq FROM events ORDER BY seq DESC LIMIT ?)",
-      arrayOf<Any>(max)
+      "DELETE FROM events WHERE seq < (SELECT seq FROM events ORDER BY seq DESC LIMIT 1 OFFSET ?)",
+      arrayOf<Any>(max - 1)
     )
   }
 }
