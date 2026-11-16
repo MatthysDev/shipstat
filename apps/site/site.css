@@ -76,7 +76,7 @@ pre .k { color: #9a9a9a; } pre .s { color: #ffb39e; } pre .f { color: #ffffff; }
 .steps li + li { padding-left: 24px; border-left: 1px solid var(--line); }
 .steps .num { font: 500 12px var(--mono); color: var(--accent); margin-bottom: 18px; }
 .steps p { color: var(--muted); font-size: 15px; }
-.steps pre { margin-top: auto; font-size: 12px; }
+.steps pre { margin-top: auto; font-size: 12px; white-space: pre-wrap; word-break: break-all; }
 .steps p + pre { margin-top: 18px; }
 
 /* Examples */
