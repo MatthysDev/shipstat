@@ -157,7 +157,7 @@ Reply **2xx** to accept. **4xx** (except 408/429) drops the batch. **408, 429, 5
 | [`packages/schema`](packages/schema) | Event types and JSON Schema |
 | [`apps/example`](apps/example) | Example app with a Perf lab |
 | [`apps/site`](apps/site) | Landing page; `/demo` is the dashboard on sample data |
-| [`docs`](docs) | Design document, performance study |
+| [`docs`](docs) | [Design](docs/design.md), [performance study](docs/perf/README.md) |
 | [`scripts/media`](scripts/media) | Logo, screenshots and promo video, reproducible |
 | [`docs/ai`](docs/ai) · [`skills`](skills) · [`llms.txt`](llms.txt) | Integration prompt and skill for AI assistants |
 | [`docs/brand`](docs/brand) | Logo, icons |
