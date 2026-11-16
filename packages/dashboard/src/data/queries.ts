@@ -218,7 +218,7 @@ export async function experimentByVersion(e: Experiment) {
 export async function experimentDaily(e: Experiment) {
   const rows = await query<{ day: Date; v: string; exposed: number; converted: number }>(`
     WITH ${exposuresCte(e)}
-    SELECT date_trunc('day', first_ts) day, v, count(*) exposed, count(conv.uid) converted
+    SELECT date_trunc('day', first_ts) AS day, v, count(*) exposed, count(conv.uid) converted
     FROM exposures LEFT JOIN conv USING (uid) GROUP BY 1, 2 ORDER BY 1`);
   const acc: Record<string, { e: number; c: number }> = {};
   return rows.map((r) => {

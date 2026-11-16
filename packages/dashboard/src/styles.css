@@ -38,7 +38,7 @@ code, .mono { font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; fon
 .side-foot { margin-top: auto; border-top: 1px solid var(--line); padding: 14px 10px 0; color: var(--faint); font-size: 12px; }
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--good); margin-right: 6px; }
 
-.main { padding: 28px 36px 48px; min-width: 0; }
+.main { padding: 28px 36px 48px; min-width: 0; width: 100%; max-width: 1480px; }
 .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
 .head h1 { margin: 0; font-size: 22px; letter-spacing: -.01em; }
 .head p { margin: 4px 0 0; color: var(--muted); }
@@ -76,7 +76,7 @@ code, .mono { font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; fon
 .seg span.on { background: var(--text); color: #fff; }
 
 .chart { position: relative; }
-.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart svg { display: block; overflow: visible; }
 .axis { fill: var(--faint); font-size: 11px; font-family: inherit; }
 
 table { width: 100%; border-collapse: collapse; }

@@ -42,7 +42,7 @@ export function getDb() {
 export type Row = Record<string, unknown>;
 
 /** Runs a query and returns plain JS rows (BigInt → number, Date stays Date). */
-export async function query<T extends Row = Row>(sql: string): Promise<T[]> {
+export async function query<T = Row>(sql: string): Promise<T[]> {
   const { conn } = await getDb();
   const table = await conn.query(sql);
   const fields = table.schema.fields;

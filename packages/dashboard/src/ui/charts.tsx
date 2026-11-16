@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { fmtCompact, fmtDay } from '../lib/format';
 
 export const PALETTE = ['#4f46e5', '#0e9f6e', '#e8833a', '#b3b3bb', '#d946ef', '#0891b2'];
@@ -19,10 +20,23 @@ function daysOf(points: Point[]): number[] {
   return [...new Set(points.map((p) => p.day.getTime()))].sort((a, b) => a - b);
 }
 
-const W = 1000;
 const X0 = 48;
 
-function Axis({ max, top, h, fmt }: { max: number; top: number; h: number; fmt: (n: number) => string }) {
+/** Draws in real pixels so text keeps its size whatever the screen width. */
+function useWidth(): [React.RefObject<HTMLDivElement | null>, number] {
+  const ref = useRef<HTMLDivElement>(null);
+  const [w, setW] = useState(900);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => setW(Math.max(280, Math.round(e.contentRect.width))));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return [ref, w];
+}
+
+function Axis({ max, top, h, fmt, W }: { max: number; top: number; h: number; fmt: (n: number) => string; W: number }) {
   return (
     <>
       {[0, 1, 2, 3].map((i) => {
@@ -52,14 +66,16 @@ function XLabels({ days, x, y }: { days: number[]; x: (i: number) => number; y: 
 }
 
 export function StackedBars({ keys, points, height = 250 }: { keys: string[]; points: Point[]; height?: number }) {
+  const [ref, W] = useWidth();
   const days = daysOf(points);
   const top = 8, h = height - 36;
   const totals = days.map((d) => points.filter((p) => p.day.getTime() === d).reduce((s, p) => s + p.n, 0));
   const max = niceMax(Math.max(1, ...totals));
   const bw = (W - X0) / Math.max(1, days.length);
   return (
-    <svg viewBox={`0 0 ${W} ${height}`} role="img">
-      <Axis max={max} top={top} h={h} fmt={fmtCompact} />
+    <div ref={ref}>
+    <svg viewBox={`0 0 ${W} ${height}`} width={W} height={height} role="img">
+      <Axis max={max} top={top} h={h} fmt={fmtCompact} W={W} />
       {days.map((d, i) => {
         let y = top + h;
         return keys.map((k, ki) => {
@@ -75,18 +91,21 @@ export function StackedBars({ keys, points, height = 250 }: { keys: string[]; po
       })}
       <XLabels days={days} x={(i) => X0 + i * bw + bw / 2} y={height - 2} />
     </svg>
+    </div>
   );
 }
 
 export function Lines({ keys, points, height = 240, fmt = fmtCompact, maxValue }: { keys: string[]; points: Point[]; height?: number; fmt?: (n: number) => string; maxValue?: number }) {
+  const [ref, W] = useWidth();
   const days = daysOf(points);
   const top = 8, h = height - 36;
   const max = maxValue ?? niceMax(Math.max(1e-9, ...points.map((p) => p.n)));
   const step = (W - X0) / Math.max(1, days.length - 1);
   const x = (i: number) => (days.length === 1 ? X0 + (W - X0) / 2 : X0 + i * step);
   return (
-    <svg viewBox={`0 0 ${W} ${height}`} role="img">
-      <Axis max={max} top={top} h={h} fmt={fmt} />
+    <div ref={ref}>
+    <svg viewBox={`0 0 ${W} ${height}`} width={W} height={height} role="img">
+      <Axis max={max} top={top} h={h} fmt={fmt} W={W} />
       {keys.map((k, ki) => {
         const d = days
           .map((day, i) => {
@@ -98,6 +117,7 @@ export function Lines({ keys, points, height = 240, fmt = fmtCompact, maxValue }
       })}
       <XLabels days={days} x={x} y={height - 2} />
     </svg>
+    </div>
   );
 }
 
