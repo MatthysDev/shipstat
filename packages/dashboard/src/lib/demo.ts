@@ -1,7 +1,7 @@
 import { rng } from './stats';
 
 /** Synthetic events shaped like a real app, so the dashboard can be tried without any setup. */
-export function demoEvents(days = 30, users = 2400, seed = 7) {
+export function demoEvents(days = 45, users = 3200, seed = 7) {
   const rand = rng(seed);
   const pick = <T,>(xs: T[]) => xs[Math.floor(rand() * xs.length)];
   const now = Date.now();
@@ -14,6 +14,9 @@ export function demoEvents(days = 30, users = 2400, seed = 7) {
     const firstSeen = start + rand() * (days - 1) * 86400_000;
     const platform = rand() < 0.64 ? 'ios' : 'android';
     const variant = rand() < 0.5 ? 'A' : 'B';
+    const locale = pick(['en-US', 'en-US', 'fr-FR', 'de-DE', 'es-ES']);
+    const device = platform === 'ios' ? pick(['iPhone16,2', 'iPhone15,3', 'iPhone17,1']) : pick(['Google Pixel 9', 'Samsung SM-S921B']);
+    const osVersion = platform === 'ios' ? pick(['26.1', '26.0', '18.6']) : pick(['16', '15', '14']);
     const sessions = 1 + Math.floor(rand() * 9);
     for (let s = 0; s < sessions; s++) {
       const t0 = firstSeen + s * (0.5 + rand() * 2.5) * 86400_000;
@@ -26,9 +29,9 @@ export function demoEvents(days = 30, users = 2400, seed = 7) {
         app_version,
         build: app_version === '2.3.0' ? '412' : app_version === '2.2.1' ? '398' : '377',
         platform,
-        os_version: platform === 'ios' ? pick(['26.1', '26.0', '18.6']) : pick(['16', '15', '14']),
-        device_model: platform === 'ios' ? pick(['iPhone16,2', 'iPhone15,3', 'iPhone17,1']) : pick(['Google Pixel 9', 'Samsung SM-S921B']),
-        locale: pick(['en-US', 'fr-FR', 'de-DE', 'es-ES']),
+        os_version: osVersion,
+        device_model: device,
+        locale,
         sdk_version: '0.1.0',
         variant,
         feature: 'paywall_v2',

@@ -1,4 +1,5 @@
 import * as duckdb from '@duckdb/duckdb-wasm';
+import { Type } from 'apache-arrow';
 import mvpWasm from '@duckdb/duckdb-wasm/dist/duckdb-mvp.wasm?url';
 import mvpWorker from '@duckdb/duckdb-wasm/dist/duckdb-browser-mvp.worker.js?url';
 import ehWasm from '@duckdb/duckdb-wasm/dist/duckdb-eh.wasm?url';
@@ -41,7 +42,7 @@ export function getDb() {
 
 export type Row = Record<string, unknown>;
 
-/** Runs a query and returns plain JS rows (BigInt → number, Date stays Date). */
+/** Runs a query and returns plain JS rows (BigInt → number, timestamps → Date). */
 export async function query<T = Row>(sql: string): Promise<T[]> {
   const { conn } = await getDb();
   const table = await conn.query(sql);
@@ -52,7 +53,7 @@ export async function query<T = Row>(sql: string): Promise<T[]> {
     for (const f of fields) {
       let v = r[f.name];
       if (typeof v === 'bigint') v = Number(v);
-      if (f.typeId === 10 /* Timestamp */ && typeof v === 'number') v = new Date(v);
+      if (f.typeId === Type.Timestamp && typeof v === 'number') v = new Date(v);
       o[f.name] = v;
     }
     out.push(o as T);
@@ -82,6 +83,12 @@ const INSERT_FROM = (src: string) => `
     CAST(context AS JSON)->>'feature'
   FROM ${src}
   WHERE id IS NOT NULL AND name IS NOT NULL AND ts IS NOT NULL`;
+
+/** Inserts rows from any DuckDB table function with the event columns. */
+export async function insertFrom(src: string): Promise<void> {
+  const { conn } = await getDb();
+  await conn.query(INSERT_FROM(src));
+}
 
 let fileSeq = 0;
 

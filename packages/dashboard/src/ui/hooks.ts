@@ -1,19 +1,29 @@
 import { useEffect, useState } from 'react';
 
-/** Runs an async loader when deps change; keeps the previous data while loading. */
-export function useAsync<T>(fn: () => Promise<T>, deps: unknown[]): { data: T | undefined; error: string | null; loading: boolean } {
-  const [state, setState] = useState<{ data: T | undefined; error: string | null; loading: boolean }>({ data: undefined, error: null, loading: true });
+interface AsyncState<T> {
+  key: string;
+  data?: T;
+  error?: string;
+}
+
+/**
+ * Runs an async loader whenever `deps` change. The previous data stays visible while the
+ * next one loads; `loading` is derived, so no state is set synchronously in the effect.
+ */
+export function useAsync<T>(fn: () => Promise<T>, deps: unknown[]) {
+  const key = JSON.stringify(deps);
+  const [state, setState] = useState<AsyncState<T>>({ key: '' });
   useEffect(() => {
     let alive = true;
-    setState((s) => ({ ...s, loading: true }));
     fn().then(
-      (data) => alive && setState({ data, error: null, loading: false }),
-      (e) => alive && setState((s) => ({ data: s.data, error: e instanceof Error ? e.message : String(e), loading: false }))
+      (data) => alive && setState({ key, data }),
+      (e: unknown) => alive && setState((s) => ({ key, data: s.data, error: e instanceof Error ? e.message : String(e) }))
     );
     return () => {
       alive = false;
     };
+    // `key` captures deps by value.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
-  return state;
+  }, [key]);
+  return { data: state.data, error: state.key === key ? state.error : undefined, loading: state.key !== key };
 }

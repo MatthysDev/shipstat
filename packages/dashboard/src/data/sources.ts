@@ -1,31 +1,15 @@
 import { insertEvents } from './db';
 
-export type Source =
-  | { kind: 'api'; url: string; headerName: string; headerValue: string; cursor?: string }
-  | { kind: 'supabase'; url: string; key: string; table: string; cursor?: string }
-  | { kind: 'file'; fileName?: string }
-  | { kind: 'demo' };
-
-export interface Project {
-  id: string;
-  name: string;
-  source: Source;
-  lastSync?: string;
+export interface ApiSource {
+  url: string;
+  headerName: string;
+  headerValue: string;
 }
 
-const KEY = 'shipstat.projects.v1';
-
-export function loadProjects(): Project[] {
-  try {
-    const v = JSON.parse(localStorage.getItem(KEY) || '[]');
-    return Array.isArray(v) ? v : [];
-  } catch {
-    return [];
-  }
-}
-
-export function saveProjects(p: Project[]) {
-  localStorage.setItem(KEY, JSON.stringify(p));
+export interface SupabaseSource {
+  url: string;
+  key: string;
+  table: string;
 }
 
 export interface SyncResult {
@@ -35,9 +19,9 @@ export interface SyncResult {
 
 /**
  * Reads every page from a Shipstat read endpoint: GET url?since=<cursor>&limit=5000
- * → { events, next_cursor, cursor? }. Starts from scratch: events live in memory for now.
+ * → { events, next_cursor, cursor? }. Duplicates are ignored, so reloading is safe.
  */
-export async function syncApi(src: Extract<Source, { kind: 'api' }>, onProgress?: (n: number) => void): Promise<SyncResult> {
+export async function syncApi(src: ApiSource, onProgress?: (n: number) => void): Promise<SyncResult> {
   let cursor = '';
   let added = 0;
   for (let page = 0; page < 10_000; page++) {
@@ -59,7 +43,7 @@ export async function syncApi(src: Extract<Source, { kind: 'api' }>, onProgress?
 }
 
 /** Reads a Supabase table through its REST API, ordered by received_at then id. */
-export async function syncSupabase(src: Extract<Source, { kind: 'supabase' }>, onProgress?: (n: number) => void): Promise<SyncResult> {
+export async function syncSupabase(src: SupabaseSource, onProgress?: (n: number) => void): Promise<SyncResult> {
   const base = src.url.replace(/\/$/, '') + '/rest/v1/' + encodeURIComponent(src.table || 'events');
   const pageSize = 1000;
   let added = 0;

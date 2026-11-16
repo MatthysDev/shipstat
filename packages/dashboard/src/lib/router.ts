@@ -1,0 +1,36 @@
+export type Route =
+  | { page: 'boards'; id?: string }
+  | { page: 'overview' }
+  | { page: 'event'; name?: string }
+  | { page: 'experiments' }
+  | { page: 'data' };
+
+export function parseHash(hash: string): Route {
+  const h = decodeURIComponent(hash.replace(/^#\/?/, ''));
+  const [head, ...rest] = h.split('/');
+  const arg = rest.join('/') || undefined;
+  switch (head) {
+    case 'boards':
+      return { page: 'boards', id: arg };
+    case 'overview':
+      return { page: 'overview' };
+    case 'event':
+      return { page: 'event', name: arg };
+    case 'experiments':
+      return { page: 'experiments' };
+    case 'data':
+      return { page: 'data' };
+    default:
+      return { page: 'boards' };
+  }
+}
+
+export function href(r: Route): string {
+  if (r.page === 'event' && r.name) return `#event/${encodeURIComponent(r.name)}`;
+  if (r.page === 'boards' && r.id) return `#boards/${encodeURIComponent(r.id)}`;
+  return `#${r.page}`;
+}
+
+export function go(r: Route) {
+  location.hash = href(r);
+}

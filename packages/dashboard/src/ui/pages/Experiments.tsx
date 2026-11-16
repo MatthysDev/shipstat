@@ -1,21 +1,21 @@
 import { useRef, useState } from 'react';
-import { distinctValues, eventNames, experimentArms, experimentByVersion, experimentDaily, experimentDailyExposures, type Experiment } from '../data/queries';
-import { compare, exposuresNeeded, type Comparison } from '../lib/stats';
-import { fmtInt, fmtPct, fmtSignedPct } from '../lib/format';
-import { Legend, Lines } from './charts';
-import { useAsync } from './hooks';
+import { arms, armsByVersion, cumulative, exposuresPerDay, isExperiment, type Experiment } from '../../data/experiments';
+import { distinctValues, eventNames } from '../../data/queries';
+import { fmtInt, fmtPct, fmtSignedPct } from '../../lib/format';
+import { color } from '../../lib/palette';
+import { compare, exposuresNeeded, type Comparison } from '../../lib/stats';
+import { downloadJson, isArray, readJson, writeJson } from '../../lib/storage';
+import { Legend } from '../charts/Legend';
+import { Lines } from '../charts/Lines';
+import { useAsync } from '../hooks';
 
 const KEY = 'shipstat.experiments.v1';
+/** Probability above which a variant is called a winner (or below 1 − it, a loser). */
 const THRESHOLD = 0.95;
 
-function load(): Experiment[] {
-  try {
-    const v = JSON.parse(localStorage.getItem(KEY) || '[]');
-    return Array.isArray(v) ? v : [];
-  } catch {
-    return [];
-  }
-}
+const isExperiments = (v: unknown): v is Experiment[] => isArray(v) && v.every(isExperiment);
+const load = () => readJson<Experiment[]>(KEY, [], isExperiments);
+const blank = (): Experiment => ({ id: crypto.randomUUID(), name: '', exposure: '', goal: '', variantKey: 'variant', control: 'A' });
 
 export function Experiments({ version }: { version: number }) {
   const [list, setList] = useState<Experiment[]>(load);
@@ -26,26 +26,18 @@ export function Experiments({ version }: { version: number }) {
 
   const save = (l: Experiment[]) => {
     setList(l);
-    localStorage.setItem(KEY, JSON.stringify(l));
+    writeJson(KEY, l);
   };
 
   const current = list.find((e) => e.id === selected) ?? null;
 
-  const exportJson = () => {
-    const blob = new Blob([JSON.stringify(list, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'shipstat-experiments.json';
-    a.click();
-    URL.revokeObjectURL(a.href);
-  };
 
   const importJson = async (f: File) => {
     try {
       const v = JSON.parse(await f.text());
-      if (!Array.isArray(v) || !v.every((x) => x && typeof x.id === 'string' && typeof x.exposure === 'string' && typeof x.goal === 'string')) throw new Error('Not a Shipstat experiments file');
+      if (!isExperiments(v)) throw new Error('Not a Shipstat experiments file');
       const byId = new Map(list.map((e) => [e.id, e]));
-      v.forEach((e: Experiment) => byId.set(e.id, e));
+      v.forEach((e) => byId.set(e.id, e));
       save([...byId.values()]);
       setMsg(`Imported ${v.length} test(s).`);
     } catch (e) {
@@ -63,8 +55,8 @@ export function Experiments({ version }: { version: number }) {
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn" type="button" onClick={() => fileRef.current?.click()}>Import</button>
-          <button className="btn" type="button" onClick={exportJson} disabled={!list.length}>Export</button>
-          <button className="btn primary" type="button" onClick={() => setEditing({ id: crypto.randomUUID(), name: '', exposure: '', goal: '', variantKey: 'variant', control: 'A' })}>New test</button>
+          <button className="btn" type="button" onClick={() => downloadJson('shipstat-experiments.json', list)} disabled={!list.length}>Export</button>
+          <button className="btn primary" type="button" onClick={() => setEditing(blank())}>New test</button>
           <input ref={fileRef} type="file" accept="application/json" hidden onChange={(e) => e.target.files?.[0] && importJson(e.target.files[0])} />
         </div>
       </div>
@@ -101,7 +93,7 @@ export function Experiments({ version }: { version: number }) {
         <div className="card empty">
           <h2>No A/B test yet</h2>
           <p>A test needs an exposure event (e.g. <code>paywall_viewed</code>), a goal event (e.g. <code>purchase_done</code>) and the context key that holds the variant.</p>
-          <button className="btn primary" type="button" onClick={() => setEditing({ id: crypto.randomUUID(), name: '', exposure: '', goal: '', variantKey: 'variant', control: 'A' })}>Create a test</button>
+          <button className="btn primary" type="button" onClick={() => setEditing(blank())}>Create a test</button>
         </div>
       )}
     </>
@@ -153,9 +145,9 @@ function Editor({ value, version, onSave, onCancel, onDelete }: { value: Experim
 
 function Results({ exp, version, onEdit }: { exp: Experiment; version: number; onEdit: () => void }) {
   const data = useAsync(async () => {
-    const [arms, byVer, daily, perDay] = await Promise.all([experimentArms(exp), experimentByVersion(exp), experimentDaily(exp), experimentDailyExposures(exp)]);
-    const control = arms.find((a) => a.v === exp.control);
-    const others = arms.filter((a) => a.v !== exp.control);
+    const [all, byVer, daily, perDay] = await Promise.all([arms(exp), armsByVersion(exp), cumulative(exp), exposuresPerDay(exp)]);
+    const control = all.find((a) => a.v === exp.control);
+    const others = all.filter((a) => a.v !== exp.control);
     const comps: Comparison[] = control ? others.map((a) => compare({ key: control.v, ...control }, { key: a.v, ...a })) : [];
     const versions = [...new Set(byVer.map((r) => r.ver))];
     const verRows = versions.flatMap((ver) => {
@@ -164,8 +156,8 @@ function Results({ exp, version, onEdit }: { exp: Experiment; version: number; o
         .filter((r) => r.ver === ver && r.v !== exp.control)
         .map((a) => ({ ver, a: c, b: a, cmp: c ? compare({ key: c.v, ...c }, { key: a.v, ...a }, 8000) : null }));
     });
-    return { arms, control, comps, daily, perDay, verRows };
-  }, [JSON.stringify(exp), version]);
+    return { arms: all, control, comps, daily, perDay, verRows };
+  }, [exp, version]);
 
   const d = data.data;
   if (data.error) return <div className="err">{data.error}</div>;
@@ -180,8 +172,8 @@ function Results({ exp, version, onEdit }: { exp: Experiment; version: number; o
   const days = need && d.perDay ? Math.ceil(need / (d.perDay / Math.max(1, d.arms.length))) : null;
 
   const keys = d.arms.map((a) => a.v);
-  const points = d.daily.map((r) => ({ day: r.day, key: r.v, n: r.rate * 100 }));
-  const maxRate = Math.max(1, ...points.map((p) => p.n));
+  const chart = { keys, points: d.daily.map((r) => ({ day: r.day, key: r.v, n: r.rate * 100 })) };
+  const maxRate = Math.max(1, ...chart.points.map((p) => p.n));
   const pos = (v: number) => Math.max(0, Math.min(100, ((v + 0.5) / 1.5) * 100));
 
   return (
@@ -214,7 +206,7 @@ function Results({ exp, version, onEdit }: { exp: Experiment; version: number; o
       <div className="grid" style={{ gridTemplateColumns: `repeat(${d.arms.length}, minmax(0,1fr)) minmax(0,1.2fr)`, marginBottom: 16 }}>
         {d.arms.map((a, i) => (
           <div key={a.v} className="card" style={a.v === best?.arm.key ? { borderColor: 'var(--accent)' } : undefined}>
-            <div className="ev" style={{ fontWeight: 600 }}><i style={{ width: 10, height: 10, borderRadius: 3, display: 'inline-block', background: ['#4f46e5', '#0e9f6e', '#e8833a', '#b3b3bb'][i % 4] }} />{a.v}{a.v === exp.control && <span className="faint"> · control</span>}</div>
+            <div className="ev" style={{ fontWeight: 600 }}><i style={{ width: 10, height: 10, borderRadius: 3, display: 'inline-block', background: color(i) }} />{a.v}{a.v === exp.control && <span className="faint"> · control</span>}</div>
             <div className="big">{fmtPct(a.exposed ? a.converted / a.exposed : 0)}</div>
             <div className="muted">conversion</div>
             <div className="stat-row"><div><b>{fmtInt(a.exposed)}</b>exposed</div><div><b>{fmtInt(a.converted)}</b>converted</div></div>
@@ -238,7 +230,7 @@ function Results({ exp, version, onEdit }: { exp: Experiment; version: number; o
       <div className="two">
         <div className="card">
           <div className="card-head"><div><h2>Cumulative conversion by day of exposure</h2><p>Curves usually settle after about a week</p></div><Legend keys={keys} /></div>
-          <div className="chart"><Lines keys={keys} points={points} height={230} fmt={(n) => n.toFixed(1) + ' %'} maxValue={Math.ceil(maxRate * 1.2)} /></div>
+          <Lines data={chart} height={230} fmt={(n) => n.toFixed(1) + ' %'} max={Math.ceil(maxRate * 1.2)} />
         </div>
         <div className="card">
           <div className="card-head"><div><h2>By app version</h2><p>Same test, split by the version at first exposure</p></div></div>
