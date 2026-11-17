@@ -31,16 +31,16 @@ Not measured here: Android (planned), memory, and session replay costs (Vexo and
 | 1,000 | 0.1 M | $7 | $0 | $0 | $0 | $0 |
 | 10,000 | 1 M | $7 | $15 | $75 | $0 | $0 |
 | 50,000 | 5 M | $7 | $135 | $395 | $153 | $560 |
-| 100,000 | 10 M | $7 | $285 | $725 | $324 | $1,080 |
-| 500,000 | 50 M | $8 | $1,165 | $2,765 | $1,528 | $3,893 |
+| 100,000 | 10 M | $9 | $285 | $725 | $324 | $1,080 |
+| 500,000 | 50 M | $40 | $1,165 | $2,765 | $1,528 | $3,893 |
 
 How to read it:
 
-- **Past a few million events a month**, the dashboard should query on the server rather than load everything in the browser (planned with the production mode); the same server does it.
+- **Past a few million events a month**, today's server is not enough: it keeps every event in memory, and the dashboard loads them all in the browser. The production mode (events on disk, queries on the server) is planned; the costs above assume it, on the same small server.
 - **Small apps pay nothing anywhere.** Below ~5 000 active users, PostHog's free million and Vexo's free 500 000 cover you. Shipstat's argument there is the data and the speed, not the price.
 - **Vexo bills what it captures, not only what you send.** Taps, screens, network requests, errors, performance samples and console messages are on by default and all count. The "×3" column is an illustration; check your own ratio in Vexo's usage page.
 - **PostHog bills identified events twice.** Events sent after `identify()` pay an add-on on top of the event price; anonymous ones do not.
-- **Shipstat is one small server.** A Hetzner CX23 (2 vCPU, 4 GB, 40 GB disk, €5.99 ≈ $7) is far more than ingest needs: 50 M events a month is ~19 events/s on average, and one process takes ~15 000/s (measured, 20 000 gzipped events in batches of 100). What grows is storage: ~75 bytes per event gzipped (~430 as plain NDJSON). Twelve months at 50 M events a month is ~45 GB, so a few GB of volume on top ($0.15/GB-month at Railway or Fly.io). Railway ($5), Fly.io (from ~$2) and Render ($7 + disk) work too. Not counted: your time to run it.
+- **Shipstat is one small server.** A Hetzner CX23 (2 vCPU, 4 GB, 40 GB disk, €5.99 ≈ $7) is far more than ingest needs: 50 M events a month is ~19 events/s on average, and one process takes ~15 000/s (measured, 20 000 gzipped events in batches of 100). What grows is storage: the server writes events as plain NDJSON, ~430 bytes each (measured). Twelve months at 50 M events a month is ~260 GB, so ~220 GB of volume on top ($0.15/GB-month at Railway or Fly.io: ~$33). Compressing stored events would cut this ~5×; it is not done yet. Railway ($5), Fly.io (from ~$2) and Render ($7 + disk) work too. Not counted: your time to run it.
 
 ## What you give up
 

@@ -153,10 +153,10 @@ Monthly cost at 100 custom events per active user, public prices checked on 2026
 | Active users | Shipstat | Vexo | PostHog |
 |---|---|---|---|
 | 10,000 | $7 | $15–75 | $0 |
-| 100,000 | $7 | $285–725 | $324–1,080 |
-| 500,000 | $8 | $1,165–2,765 | $1,528–3,893 |
+| 100,000 | $9 | $285–725 | $324–1,080 |
+| 500,000 | $40 | $1,165–2,765 | $1,528–3,893 |
 
-Ranges: Vexo also bills the taps, screens and requests it captures; PostHog bills identified events twice. Shipstat is one small server. What you give up: session replay, heatmaps, crash reporting, remote feature flags. [Full comparison](docs/compare.md).
+Ranges: Vexo also bills the taps, screens and requests it captures; PostHog bills identified events twice. Shipstat is one small server plus its disk. What you give up: session replay, heatmaps, crash reporting, remote feature flags. [Full comparison](docs/compare.md).
 
 **Switching keeps your history.** `shipstat/vexo` is a drop-in for `vexo-analytics`, a codemod makes the switch, and one command imports your past events:
 
