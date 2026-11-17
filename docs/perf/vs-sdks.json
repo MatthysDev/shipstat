@@ -1,0 +1,82 @@
+{
+  "date": "2026-11-17",
+  "platform": "ios simulator, release build",
+  "runs": 3,
+  "note": "8 other simulators booted on the host during the run: absolute values are higher than in the main study, ratios are what to read.",
+  "latency": {
+    "noop": {
+      "p50Us": 0.08,
+      "p95Us": 0.08,
+      "p99Us": 0.21,
+      "meanUs": 0.1
+    },
+    "naive": {
+      "p50Us": 10.08,
+      "p95Us": 11.79,
+      "p99Us": 96.5,
+      "meanUs": 12.22
+    },
+    "shipstat": {
+      "p50Us": 1.63,
+      "p95Us": 2.0,
+      "p99Us": 4.21,
+      "meanUs": 1.84
+    },
+    "vexo": {
+      "p50Us": 3.79,
+      "p95Us": 4.04,
+      "p99Us": 5.5,
+      "meanUs": 5.07
+    },
+    "posthog": {
+      "p50Us": 113.12,
+      "p95Us": 150.37,
+      "p99Us": 341.42,
+      "meanUs": 118.24
+    }
+  },
+  "frames100": {
+    "noop": {
+      "fps": 60.0,
+      "longFrames": 0
+    },
+    "naive": {
+      "fps": 60.0,
+      "longFrames": 1
+    },
+    "shipstat": {
+      "fps": 60.0,
+      "longFrames": 1
+    },
+    "vexo": {
+      "fps": 59.9,
+      "longFrames": 3
+    },
+    "posthog": {
+      "fps": 42.8,
+      "longFrames": 74
+    }
+  },
+  "frames20": {
+    "noop": {
+      "fps": 60.0,
+      "longFrames": 0
+    },
+    "naive": {
+      "fps": 59.6,
+      "longFrames": 2
+    },
+    "shipstat": {
+      "fps": 60.0,
+      "longFrames": 0
+    },
+    "vexo": {
+      "fps": 60.0,
+      "longFrames": 0
+    },
+    "posthog": {
+      "fps": 60.0,
+      "longFrames": 1
+    }
+  }
+}

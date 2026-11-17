@@ -1,10 +1,25 @@
+import PostHog from 'posthog-react-native';
 import { Platform } from 'react-native';
 import Shipstat from 'shipstat';
+import { customEvent, vexo } from 'vexo-analytics';
 
 import { NaiveSdk } from './naiveSdk';
 
-export type Subject = 'noop' | 'naive' | 'shipstat';
-export const SUBJECTS: Subject[] = ['noop', 'naive', 'shipstat'];
+export type Subject = 'noop' | 'naive' | 'shipstat' | 'posthog' | 'vexo';
+export const SUBJECTS: Subject[] = ['noop', 'naive', 'shipstat', 'posthog', 'vexo'];
+
+// Real third-party SDKs, set up the way their docs show. PostHog sends to the local server
+// (nothing leaves the machine); Vexo gets a placeholder key, so its server drops the events
+// after they went through the whole client pipeline that the benchmark measures.
+let posthog: PostHog | null = null;
+let vexoStarted = false;
+export function setupThirdParties(serverBase: string) {
+  if (!posthog) posthog = new PostHog('phc_shipstat_benchmark', { host: serverBase, flushAt: 50, flushInterval: 10000, captureAppLifecycleEvents: false, disableRemoteConfig: true, preloadFeatureFlags: false });
+  if (!vexoStarted) {
+    vexo('shipstat-benchmark-placeholder', { sessionReplay: false, performance: false });
+    vexoStarted = true;
+  }
+}
 
 export interface LatencyResult {
   subject: Subject;
@@ -40,6 +55,8 @@ const noop = (_name: string, _props?: object) => undefined;
 function caller(subject: Subject) {
   if (subject === 'shipstat') return (name: string, props: Record<string, string | number | boolean>) => Shipstat.track(name, props);
   if (subject === 'naive') return (name: string, props: Record<string, string | number | boolean>) => NaiveSdk.track(name, props);
+  if (subject === 'posthog') return (name: string, props: Record<string, string | number | boolean>) => posthog?.capture(name, props);
+  if (subject === 'vexo') return (name: string, props: Record<string, string | number | boolean>) => customEvent(name, props);
   return noop;
 }
 
@@ -105,6 +122,8 @@ export async function measureDelivery(healthUrl: string, headers: Record<string,
 }
 
 export async function runAll(opts: { healthUrl: string; headers: Record<string, string>; onStep: (s: string) => void }): Promise<Report> {
+  setupThirdParties(opts.healthUrl.replace(/\/health$/, ''));
+  await pause(2000);
   const latency: LatencyResult[] = [];
   const frames: FrameResult[] = [];
   for (const s of SUBJECTS) {
