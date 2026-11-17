@@ -154,7 +154,7 @@ Monthly cost at 100 custom events per active user, public prices checked on 2026
 |---|---|---|---|
 | 10,000 | $7 | $15–75 | $0 |
 | 100,000 | $7 | $285–725 | $324–1,080 |
-| 500,000 | $35 | $1,165–2,765 | $1,528–3,893 |
+| 500,000 | $8 | $1,165–2,765 | $1,528–3,893 |
 
 Ranges: Vexo also bills the taps, screens and requests it captures; PostHog bills identified events twice. Shipstat is one small server. What you give up: session replay, heatmaps, crash reporting, remote feature flags. [Full comparison](docs/compare.md).
 

@@ -35,12 +35,15 @@ export function vexo(events, autoFactor = 1) {
 }
 
 /**
- * Shipstat: your server. One Hetzner CX23 (2 vCPU, 4 GB, 40 GB disk, €5.99 ≈ $7) per 10 M
- * events a month, a generous margin: one process ingests ~15 000 events/s and an event takes
- * ~75 bytes gzipped on disk (both measured, see docs/compare.md).
+ * Shipstat: one server you rent. A Hetzner CX23 (2 vCPU, 4 GB, 40 GB disk, €5.99 ≈ $7) is far
+ * more than ingest needs: 50 M events a month is ~19 events/s on average, and one process takes
+ * ~15 000/s (measured). What grows is storage, ~75 bytes per event gzipped (measured): kept
+ * `retentionMonths`, anything past the 40 GB disk is billed as a volume at $0.15/GB-month
+ * (Railway's and Fly.io's price; a conservative figure).
  */
-export function shipstat(events) {
-  return 7 * Math.max(1, Math.ceil(events / (10 * M)));
+export function shipstat(events, retentionMonths = 12) {
+  const storedGb = (events * retentionMonths * 75) / 1e9;
+  return 7 + Math.max(0, storedGb - 40) * 0.15;
 }
 
 export function compare({ users, eventsPerUser, identifiedShare = 1, vexoAutoFactor = 1 }) {
