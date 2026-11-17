@@ -19,10 +19,10 @@ class ShipstatModule : Module() {
         endpoint = endpoint,
         headers = (cfg["headers"] as? Map<String, Any?>)?.mapValues { it.value.toString() } ?: emptyMap(),
         flushAt = (cfg["flushAt"] as? Number)?.toInt() ?: 50,
-        flushIntervalMs = (cfg["flushIntervalMs"] as? Number)?.toLong() ?: 10_000L,
+        flushIntervalMs = (cfg["flushIntervalMs"] as? Number)?.toLong() ?: 30_000L,
         maxQueueSize = (cfg["maxQueueSize"] as? Number)?.toInt() ?: 10_000,
         debug = cfg["debug"] as? Boolean ?: false,
-        compress = cfg["compress"] as? Boolean ?: false,
+        compress = cfg["compress"] as? Boolean ?: true,
       )
       val extra = buildMap {
         (cfg["sdkVersion"] as? String)?.takeIf { it.isNotEmpty() }?.let { put("sdk_version", it) }

@@ -59,7 +59,13 @@ internal class ShipstatCore private constructor(appContext: Context) {
   private var inFlight = false
   private var failures = 0
   private var nextAttemptAt = 0L
+  /** One-shot: armed only while events wait, so an idle app never wakes up for Shipstat. */
   private var timer: ScheduledFuture<*>? = null
+  /** Whether the endpoint reads gzip bodies, learned from its answers during this session. */
+  private enum class GzipSupport { UNTESTED, ACCEPTED, REFUSED }
+  private var gzipSupport = GzipSupport.UNTESTED
+  /** True while the plain-JSON resend that follows a refused gzip batch is in flight. */
+  private var probingPlain = false
   private val flushWaiters = ArrayList<() -> Unit>()
   /**
    * Events serialized but not yet on disk. Drained on the next executor turn, so a burst of
@@ -93,17 +99,10 @@ internal class ShipstatCore private constructor(appContext: Context) {
       store.clear()
     }
     pending = store.count()
-    timer?.cancel(false)
-    // A periodic task that throws is cancelled for good: keep it exception-free.
-    timer = executor.scheduleWithFixedDelay({
-      try {
-        flushIfNeeded(any = true)
-      } catch (e: Exception) {
-        Log.w("shipstat", "flush failed: ${e.message}")
-      }
-    }, cfg.flushIntervalMs, cfg.flushIntervalMs, TimeUnit.MILLISECONDS)
+    cancelTimer()
     log("init, $pending waiting event(s)")
     flushIfNeeded()
+    armTimer()
   }
 
   fun track(name: String, propsJson: String?, tsMs: Double) = run {
@@ -149,6 +148,7 @@ internal class ShipstatCore private constructor(appContext: Context) {
       writeBuffer.clear()
       store.clear()
       pending = 0
+      cancelTimer()
     }
   }
 
@@ -184,6 +184,31 @@ internal class ShipstatCore private constructor(appContext: Context) {
     context = try { JSONObject(prefs.getString("context", "{}") ?: "{}") } catch (_: Exception) { JSONObject() }
   }
 
+  /**
+   * Wakes up once, [afterMs] from now (default: the flush interval), if events are waiting.
+   * Runs on [executor] like everything else.
+   */
+  private fun armTimer(afterMs: Long? = null) {
+    val cfg = config ?: return
+    if (!enabled || (pending <= 0 && writeBuffer.isEmpty())) return
+    if (afterMs == null && timer != null) return
+    cancelTimer()
+    timer = executor.schedule({
+      timer = null
+      try {
+        flushIfNeeded(any = true)
+        armTimer()
+      } catch (e: Exception) {
+        Log.w("shipstat", "flush failed: ${e.message}")
+      }
+    }, afterMs ?: cfg.flushIntervalMs, TimeUnit.MILLISECONDS)
+  }
+
+  private fun cancelTimer() {
+    timer?.cancel(false)
+    timer = null
+  }
+
   private fun finishWaiters() {
     val w = ArrayList(flushWaiters)
     flushWaiters.clear()
@@ -203,7 +228,10 @@ internal class ShipstatCore private constructor(appContext: Context) {
       store.trimTo(maxSize)
       pending = store.count()
     }
-    if (thenFlush && pending >= (config?.flushAt ?: 50)) flushIfNeeded()
+    if (thenFlush) {
+      if (pending >= (config?.flushAt ?: 50)) flushIfNeeded()
+      armTimer()
+    }
   }
 
   private fun flushIfNeeded(any: Boolean = false) {
@@ -222,6 +250,7 @@ internal class ShipstatCore private constructor(appContext: Context) {
       .append(rows.joinToString(",") { it.second })
       .append("]}")
       .toString()
+    val gzipped = cfg.compress && gzipSupport != GzipSupport.REFUSED
     inFlight = true
     network.execute {
       var status = 0
@@ -236,7 +265,7 @@ internal class ShipstatCore private constructor(appContext: Context) {
         conn.setRequestProperty("Content-Type", "application/json")
         cfg.headers.forEach { (k, v) -> conn.setRequestProperty(k, v) }
         val bytes = body.toByteArray(Charsets.UTF_8)
-        if (cfg.compress) {
+        if (gzipped) {
           conn.setRequestProperty("Content-Encoding", "gzip")
           conn.outputStream.use { out -> GZIPOutputStream(out).use { it.write(bytes) } }
         } else {
@@ -251,7 +280,7 @@ internal class ShipstatCore private constructor(appContext: Context) {
       }
       executor.execute {
         try {
-          onResponse(rows.size, lastSeq, status, retryAfter, error)
+          onResponse(rows.size, lastSeq, status, retryAfter, error, gzipped)
         } catch (e: Exception) {
           inFlight = false
           finishWaiters()
@@ -261,14 +290,30 @@ internal class ShipstatCore private constructor(appContext: Context) {
     }
   }
 
-  private fun onResponse(count: Int, lastSeq: Long, status: Int, retryAfter: Double?, error: String?) {
+  private fun onResponse(count: Int, lastSeq: Long, status: Int, retryAfter: Double?, error: String?, gzipped: Boolean) {
     inFlight = false
+    val cfg = config
+    if (probingPlain && !gzipped && error == null && status > 0) {
+      // Plain JSON failed too: gzip was not the problem, keep compressing.
+      probingPlain = false
+      if (status !in 200..299) gzipSupport = GzipSupport.ACCEPTED
+    }
     if (error == null && status in 200..299) {
+      if (gzipped) gzipSupport = GzipSupport.ACCEPTED
       store.deleteUpTo(lastSeq)
       pending = store.count()
       failures = 0
       log("sent $count event(s)")
       if (pending > 0) { flushIfNeeded(any = true); return }
+      cancelTimer()
+    } else if (error == null && gzipped && gzipSupport == GzipSupport.UNTESTED && mayRejectGzip(status)) {
+      // Some endpoints cannot read gzip bodies: resend this batch as plain JSON right away,
+      // once per session.
+      gzipSupport = GzipSupport.REFUSED
+      probingPlain = true
+      log("endpoint refused a gzipped batch (HTTP $status), sending plain JSON from now on")
+      flushIfNeeded(any = true)
+      return
     } else if (error == null && status in 400..499 && status != 408 && status != 429) {
       store.deleteUpTo(lastSeq)
       pending = store.count()
@@ -277,12 +322,18 @@ internal class ShipstatCore private constructor(appContext: Context) {
       failures += 1
       var delay = min(300.0, 2.0.pow(failures))
       if (retryAfter != null) delay = min(300.0, max(delay, retryAfter))
+      // Never retry sooner than the flush interval: an offline phone stays asleep.
+      if (cfg != null) delay = max(delay, cfg.flushIntervalMs / 1000.0)
       nextAttemptAt = System.currentTimeMillis() + (delay * 1000).toLong()
+      armTimer((delay * 1000).toLong())
       log("send failed (${error ?: "HTTP $status"}), retry in ${delay.toInt()}s")
     }
     finishWaiters()
   }
 
+
+  /** An HTTP error that may mean "cannot read gzip" rather than "bad events" or "server down". */
+  private fun mayRejectGzip(status: Int) = status >= 400 && status !in listOf(401, 403, 408, 429, 502, 503, 504)
 
   /** JSON-safe primitive, or null to drop the value (non-finite numbers, nested values). */
   private fun primitive(v: Any?): Any? = when (v) {

@@ -7,7 +7,7 @@
 - Local receiver + dashboard: `npx shipstat-dashboard` → events on http://localhost:8787/events, dashboard on http://localhost:8787.
 
 ## API (import Shipstat from 'shipstat')
-- `init({ endpoint, headers?, flushAt?=50, flushIntervalMs?=10000, maxQueueSize?=10000, enabled?=true, compress?=false, debug?=false })` — call once at module level in the app entry.
+- `init({ endpoint, headers?, flushAt?=50, flushIntervalMs?=30000, maxQueueSize?=10000, enabled?=true, compress?=true, debug?=false })` — call once at module level in the app entry.
 - `track(name: string, props?: Record<string, string | number | boolean | null | Array<…>>)` — flat props only, never throws, ≈ 1 µs on the JS thread.
 - `setContext(ctx)` / `unsetContext(...keys)` — merged into every following event, persisted. Set before the first track (module level or useState initializer), not only in a top-level useEffect.
 - `identify(userId | null)` — internal user id after sign-in; null on sign-out.

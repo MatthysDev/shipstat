@@ -20,6 +20,8 @@ final class EventStore {
     values.isExcludedFromBackup = true
     try? url.setResourceValues(values)
     exec("PRAGMA journal_mode=WAL;")
+    // WAL + NORMAL: no fsync per transaction. A power cut may lose the last few events, a crash never does.
+    exec("PRAGMA synchronous=NORMAL;")
     exec("CREATE TABLE IF NOT EXISTS events (seq INTEGER PRIMARY KEY AUTOINCREMENT, body TEXT NOT NULL);")
   }
 

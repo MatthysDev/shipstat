@@ -16,6 +16,8 @@ internal class EventStore(context: Context) :
 
   override fun onConfigure(db: SQLiteDatabase) {
     db.enableWriteAheadLogging()
+    // WAL + NORMAL: no fsync per transaction. A power cut may lose the last few events, a crash never does.
+    try { db.execSQL("PRAGMA synchronous=NORMAL") } catch (_: Exception) {}
   }
 
   /** One transaction and one compiled statement for the whole batch. */

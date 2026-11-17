@@ -17,7 +17,6 @@ import Shipstat from 'shipstat';
 Shipstat.init({
   endpoint: process.env.EXPO_PUBLIC_SHIPSTAT_ENDPOINT!, // e.g. https://api.example.com/events
   headers: { Authorization: `Bearer ${process.env.EXPO_PUBLIC_SHIPSTAT_KEY}` },
-  compress: true, // only if the endpoint accepts gzip bodies
 });
 ```
 

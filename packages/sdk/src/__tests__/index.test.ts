@@ -28,11 +28,11 @@ describe('init', () => {
         endpoint: 'https://api.example.com/events',
         headers: {},
         flushAt: 50,
-        flushIntervalMs: 10000,
+        flushIntervalMs: 30000,
         maxQueueSize: 10000,
         enabled: true,
         debug: false,
-        compress: false,
+        compress: true,
         sdkVersion: '0.1.0',
         ota: null,
       })

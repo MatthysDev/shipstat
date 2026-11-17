@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Lighter on battery: the upload timer only runs while events wait (no wake-up at all when idle), `flushIntervalMs` defaults to 30 s instead of 10 s so the radio wakes up a third as often, and retries never come sooner than that interval.
+- `compress` defaults to true. An endpoint that answers a gzipped batch with an error gets it again as plain JSON, and the session stays plain.
+- SQLite `synchronous=NORMAL` (with WAL): no fsync per write.
 - `shipstat/vexo`: drop-in replacement for `vexo-analytics` (`vexo`, `customEvent`, `identifyDevice`, `enableTracking`, `disableTracking`, `trackScreen`, `trackError`; replay and heatmap calls are accepted and ignored).
 
 ## 0.1.0

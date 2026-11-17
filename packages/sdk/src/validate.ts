@@ -40,11 +40,11 @@ export function normalizeConfig(config: ShipstatConfig) {
     endpoint: config.endpoint,
     headers: config.headers ?? {},
     flushAt: pos(config.flushAt, 50),
-    flushIntervalMs: pos(config.flushIntervalMs, 10_000),
+    flushIntervalMs: pos(config.flushIntervalMs, 30_000),
     maxQueueSize: pos(config.maxQueueSize, 10_000),
     enabled: config.enabled ?? true,
     debug: config.debug ?? false,
-    compress: config.compress ?? false,
+    compress: config.compress ?? true,
   };
 }
 

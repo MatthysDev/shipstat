@@ -40,7 +40,13 @@ final class ShipstatCore {
   private var inFlight = false
   private var failures = 0
   private var nextAttemptAt = Date.distantPast
+  /// One-shot: armed only while events wait, so an idle app never wakes up for Shipstat.
   private var timer: DispatchSourceTimer?
+  /// Whether the endpoint reads gzip bodies, learned from its answers during this session.
+  private enum GzipSupport { case untested, accepted, refused }
+  private var gzipSupport = GzipSupport.untested
+  /// True while the plain-JSON resend that follows a refused gzip batch is in flight.
+  private var probingPlain = false
   private var flushWaiters: [() -> Void] = []
   /// Events serialized but not yet on disk. Drained on the next turn of the queue, so a burst
   /// of track() calls becomes one SQLite transaction instead of one per event.
@@ -63,9 +69,10 @@ final class ShipstatCore {
         self.store.clear()
       }
       self.pending = self.store.count()
-      self.startTimer(intervalMs: cfg.flushIntervalMs)
+      self.cancelTimer()
       self.log("init, \(self.pending) waiting event(s)")
       self.flushIfNeeded()
+      self.armTimer()
     }
   }
 
@@ -131,6 +138,7 @@ final class ShipstatCore {
         self.writeBuffer.removeAll()
         self.store.clear()
         self.pending = 0
+        self.cancelTimer()
       }
     }
   }
@@ -217,13 +225,28 @@ final class ShipstatCore {
     }
   }
 
-  private func startTimer(intervalMs: Int) {
-    timer?.cancel()
+  /// Wakes up once, `afterMs` from now (default: the flush interval), if events are waiting.
+  /// A 10 % leeway lets the system batch this wake-up with others.
+  private func armTimer(afterMs: Int? = nil) {
+    guard let cfg = config, enabled, pending > 0 || !writeBuffer.isEmpty else { return }
+    if afterMs == nil, timer != nil { return }
+    cancelTimer()
+    let ms = afterMs ?? cfg.flushIntervalMs
     let t = DispatchSource.makeTimerSource(queue: queue)
-    t.schedule(deadline: .now() + .milliseconds(intervalMs), repeating: .milliseconds(intervalMs), leeway: .seconds(1))
-    t.setEventHandler { [weak self] in self?.flushIfNeeded(any: true) }
+    t.schedule(deadline: .now() + .milliseconds(ms), leeway: .milliseconds(Swift.max(1000, ms / 10)))
+    t.setEventHandler { [weak self] in
+      guard let self = self else { return }
+      self.cancelTimer()
+      self.flushIfNeeded(any: true)
+      self.armTimer()
+    }
     t.resume()
     timer = t
+  }
+
+  private func cancelTimer() {
+    timer?.cancel()
+    timer = nil
   }
 
   private func finishWaiters() {
@@ -245,7 +268,10 @@ final class ShipstatCore {
       store.trim(to: cap)
       pending = store.count()
     }
-    if thenFlush, pending >= (config?.flushAt ?? 50) { flushIfNeeded() }
+    if thenFlush {
+      if pending >= (config?.flushAt ?? 50) { flushIfNeeded() }
+      armTimer()
+    }
   }
 
   private func flushIfNeeded(any: Bool = false) {
@@ -274,9 +300,11 @@ final class ShipstatCore {
     req.setValue("application/json", forHTTPHeaderField: "Content-Type")
     cfg.headers.forEach { req.setValue($1, forHTTPHeaderField: $0) }
     let raw = Data(body.utf8)
-    if cfg.compress, let gz = Gzip.compress(raw) {
+    var gzipped = false
+    if cfg.compress, gzipSupport != .refused, let gz = Gzip.compress(raw) {
       req.setValue("gzip", forHTTPHeaderField: "Content-Encoding")
       req.httpBody = gz
+      gzipped = true
     } else {
       req.httpBody = raw
     }
@@ -286,12 +314,27 @@ final class ShipstatCore {
       self.queue.async {
         self.inFlight = false
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        if self.probingPlain, !gzipped, status > 0 {
+          // Plain JSON failed too: gzip was not the problem, keep compressing.
+          self.probingPlain = false
+          if !(200..<300).contains(status) { self.gzipSupport = .accepted }
+        }
         if error == nil, (200..<300).contains(status) {
+          if gzipped { self.gzipSupport = .accepted }
           self.store.delete(upTo: last.seq)
           self.pending = self.store.count()
           self.failures = 0
           self.log("sent \(rows.count) event(s)")
           if self.pending > 0 { self.flushIfNeeded(any: true); return }
+          self.cancelTimer()
+        } else if gzipped, self.gzipSupport == .untested, Self.mayRejectGzip(status) {
+          // Some endpoints cannot read gzip bodies: resend this batch as plain JSON right away,
+          // once per session.
+          self.gzipSupport = .refused
+          self.probingPlain = true
+          self.log("endpoint refused a gzipped batch (HTTP \(status)), sending plain JSON from now on")
+          self.flushIfNeeded(any: true)
+          return
         } else if (400..<500).contains(status), status != 408, status != 429 {
           self.store.delete(upTo: last.seq)
           self.pending = self.store.count()
@@ -302,12 +345,20 @@ final class ShipstatCore {
           if let h = (response as? HTTPURLResponse)?.value(forHTTPHeaderField: "Retry-After"), let s = Double(h) {
             delay = min(300.0, max(delay, s))
           }
+          // Never retry sooner than the flush interval: an offline phone stays asleep.
+          delay = Swift.max(delay, Double(cfg.flushIntervalMs) / 1000)
           self.nextAttemptAt = Date().addingTimeInterval(delay)
+          self.armTimer(afterMs: Int(delay * 1000))
           self.log("send failed (\(error?.localizedDescription ?? "HTTP \(status)")), retry in \(Int(delay))s")
         }
         self.finishWaiters()
       }
     }.resume()
+  }
+
+  /// An HTTP error that may mean "cannot read gzip" rather than "bad events" or "server down".
+  static func mayRejectGzip(_ status: Int) -> Bool {
+    status >= 400 && ![401, 403, 408, 429, 502, 503, 504].contains(status)
   }
 
   private func log(_ msg: String) {

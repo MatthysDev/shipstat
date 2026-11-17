@@ -53,7 +53,9 @@ Failure even if it "works":
 - API: `init`, `track`, `setContext`, `unsetContext`, `identify`, `setEnabled`, `reset`, `flush`, `getAnonId` (see the README).
 - Automatic context: `app_version`, `build`, `ota` (expo-updates), `platform`, `os_version`, `device_model`, `locale`, `sdk_version`. No IDFA/GAID, IP or personal data.
 - Storage: SQLite queue on a serial queue (iOS) / single-thread executor (Android). Bursts of `track()` share one transaction.
-- Upload: when `flushAt` events wait, every `flushIntervalMs`, and when the app goes to the background. 2xx deletes the batch; 4xx (except 408/429) drops it; 408/429/5xx/network errors retry with exponential backoff (max 5 min), honoring `Retry-After`. Optional gzip.
+- Upload: when `flushAt` events wait, `flushIntervalMs` (30 s) after the first waiting event, and when the app goes to the background. The timer is one-shot and only armed while events wait: an idle app never wakes up. 2xx deletes the batch; 4xx (except 408/429) drops it; 408/429/5xx/network errors retry with exponential backoff, never sooner than `flushIntervalMs` and at most 5 min apart, honoring `Retry-After`.
+- Gzip by default. If the endpoint answers a gzipped batch with an error that may mean it cannot read gzip (not 401/403/408/429/502/503/504), the batch is resent once as plain JSON; if that works, the session stays plain, otherwise gzip stays on.
+- SQLite in WAL mode with `synchronous=NORMAL`: no fsync per transaction (a power cut may lose the last events, an app crash does not).
 - Offline: the queue grows to `maxQueueSize`, then the oldest events are dropped.
 - Opt-out (`setEnabled(false)`) deletes waiting events and stops tracking; persisted.
 - Targets: `track()` well under 100 µs on the JS thread (measured ≈ 1 µs), no I/O on the UI thread.
