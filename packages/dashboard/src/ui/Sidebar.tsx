@@ -1,3 +1,4 @@
+import { useBranding } from '../lib/branding';
 import { fmtAgo, fmtInt } from '../lib/format';
 import type { Route } from '../lib/router';
 import type { Loaded } from './App';
@@ -7,16 +8,20 @@ const NAV: { page: Route['page']; label: string; section?: string }[] = [
   { page: 'boards', label: 'Boards', section: 'Stats' },
   { page: 'overview', label: 'Overview' },
   { page: 'event', label: 'Events' },
+  { page: 'paths', label: 'Paths' },
   { page: 'experiments', label: 'A/B tests' },
-  { page: 'data', label: 'Data & SDK', section: 'Project' },
+  { page: 'catalog', label: 'Event catalog', section: 'Project' },
+  { page: 'data', label: 'Data & SDK' },
+  { page: 'settings', label: 'Workspace' },
 ];
 
 export function Sidebar({ route, loaded }: { route: Route; loaded: Loaded }) {
+  const b = useBranding();
   return (
     <aside className="side">
       <a className="brand" href="#boards">
-        <Logo />
-        shipstat
+        {b.logo ? <img className="brand-logo" src={b.logo} alt="" /> : <Logo />}
+        <span className="brand-name">{b.name ?? 'shipstat'}</span>
       </a>
       {NAV.map((it) => (
         <div key={it.page}>
@@ -44,6 +49,7 @@ export function Sidebar({ route, loaded }: { route: Route; loaded: Loaded }) {
         ) : (
           'Nothing loaded. Your data never leaves your browser.'
         )}
+        {b.name && <div className="powered">Made with <a href="https://github.com/MatthysDev/shipstat">Shipstat</a></div>}
       </div>
     </aside>
   );

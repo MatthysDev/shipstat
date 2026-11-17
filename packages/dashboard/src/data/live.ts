@@ -26,18 +26,29 @@ export function startLive(src: ApiSource, cursor: string, onNew: (added: number)
 }
 
 export interface ServerConfig {
-  source: ApiSource;
-  live: boolean;
+  /** Absent on a static host that only shares a workspace. */
+  source?: ApiSource;
+  live?: boolean;
   name?: string;
+  /** Shared workspace (boards, catalog, branding), inline or by URL. */
+  workspace?: unknown;
+  workspaceUrl?: string;
 }
 
-/** Present when the dashboard is served by `shipstat-dashboard`. */
+/**
+ * Present when the dashboard is served by `shipstat-dashboard`, or when a static host puts a
+ * `shipstat.config.json` next to index.html.
+ */
 export async function readServerConfig(): Promise<ServerConfig | null> {
   try {
     const res = await fetch('./shipstat.config.json', { cache: 'no-store' });
     if (!res.ok || !res.headers.get('content-type')?.includes('json')) return null;
     const v = (await res.json()) as ServerConfig;
-    return v && v.source && typeof v.source.url === 'string' ? v : null;
+    if (!v || typeof v !== 'object') return null;
+    const source = v.source && typeof v.source.url === 'string' ? v.source : undefined;
+    const workspaceUrl = typeof v.workspaceUrl === 'string' ? v.workspaceUrl : undefined;
+    if (!source && !v.workspace && !workspaceUrl) return null;
+    return { ...v, source, workspaceUrl };
   } catch {
     return null;
   }

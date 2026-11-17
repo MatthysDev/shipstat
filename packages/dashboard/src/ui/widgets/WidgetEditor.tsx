@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { breakdownKeys, distinctValues, eventNames } from '../../data/queries';
 import { FILTER_KEYS, RANGES, type Metric } from '../../data/sql';
 import { METRIC_LABELS, VIZ_LABELS, type Viz, type Widget } from '../../lib/boards';
+import { EventHint, EventOptions } from '../EventDoc';
 import { useAsync } from '../hooks';
 import { WidgetView } from './WidgetView';
 
@@ -12,6 +13,7 @@ const VIZ_HELP: Record<Viz, string> = {
   pie: 'Share of each value of the split.',
   table: 'Ranked values of the split.',
   funnel: 'Users who do each step after the previous one.',
+  paths: 'The most common events right after (or before) an event, per user and session.',
   feed: 'The newest events as they arrive. Best with live mode.',
 };
 
@@ -44,33 +46,55 @@ export function WidgetEditor({ value, version, onSave, onCancel }: { value: Widg
             {steps.map((s, i) => (
               <div key={i} className="step-row">
                 <span className="faint">{i + 1}</span>
-                <select className="input" value={s} onChange={(e) => set({ steps: steps.map((x, j) => (j === i ? e.target.value : x)) })}>
+                <select className="input" value={s} title={s} onChange={(e) => set({ steps: steps.map((x, j) => (j === i ? e.target.value : x)) })}>
                   <option value="">Choose an event…</option>
-                  {(names.data ?? []).map((n) => <option key={n}>{n}</option>)}
+                  <EventOptions names={names.data ?? []} />
                 </select>
                 {steps.length > 2 && <button type="button" className="btn" onClick={() => set({ steps: steps.filter((_, j) => j !== i) })} aria-label={`Remove step ${i + 1}`}>×</button>}
               </div>
             ))}
             {steps.length < 8 && <button type="button" className="btn" onClick={() => set({ steps: [...steps, ''] })}>Add step</button>}
           </div>
+        ) : w.viz === 'paths' ? (
+          <>
+            <div className="field">Direction
+              <div className="seg" style={{ width: 'fit-content' }}>
+                <button type="button" className={w.direction !== 'before' ? 'on' : ''} onClick={() => set({ direction: 'after' })}>Starting at</button>
+                <button type="button" className={w.direction === 'before' ? 'on' : ''} onClick={() => set({ direction: 'before' })}>Ending at</button>
+              </div>
+            </div>
+            <label className="field">{w.direction === 'before' ? 'End event' : 'Start event'}
+              <select className="input" value={w.event ?? ''} onChange={(e) => set({ event: e.target.value || undefined })}>
+                <option value="">Choose an event…</option>
+                <EventOptions names={names.data ?? []} />
+              </select>
+              <EventHint name={w.event} />
+            </label>
+            <label className="field">Steps
+              <select className="input" value={w.depth ?? 3} onChange={(e) => set({ depth: Number(e.target.value) })}>
+                {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n} step{n > 1 ? 's' : ''}</option>)}
+              </select>
+            </label>
+          </>
         ) : (
           <label className="field">Event
             <select className="input" value={w.event ?? ''} onChange={(e) => set({ event: e.target.value || undefined })}>
               <option value="">All events</option>
-              {(names.data ?? []).map((n) => <option key={n}>{n}</option>)}
+              <EventOptions names={names.data ?? []} />
             </select>
+            <EventHint name={w.event} />
           </label>
         )}
 
         <div className="form-grid two-col">
-          {w.viz !== 'funnel' && w.viz !== 'feed' && (
+          {w.viz !== 'funnel' && w.viz !== 'feed' && w.viz !== 'paths' && (
             <label className="field">Measure
               <select className="input" value={w.metric} onChange={(e) => set({ metric: e.target.value as Metric })}>
                 {(Object.keys(METRIC_LABELS) as Metric[]).map((m) => <option key={m} value={m}>{METRIC_LABELS[m]}</option>)}
               </select>
             </label>
           )}
-          {w.viz !== 'number' && w.viz !== 'feed' && (
+          {w.viz !== 'number' && w.viz !== 'feed' && w.viz !== 'paths' && (
             <label className="field">Split by
               <select className="input" value={w.split ?? ''} onChange={(e) => set({ split: e.target.value || undefined })}>
                 <option value="">{w.viz === 'pie' || w.viz === 'table' ? 'Event name' : 'No split'}</option>
@@ -103,6 +127,10 @@ export function WidgetEditor({ value, version, onSave, onCancel }: { value: Widg
           </div>
         </div>
 
+        <label className="field">Note
+          <textarea className="input" rows={3} value={w.note ?? ''} onChange={(e) => set({ note: e.target.value || undefined })} placeholder="What to read in this chart, for whoever opens the board." />
+        </label>
+
         <div className="row-actions">
           <button className="btn primary" type="submit">Save</button>
           <button className="btn" type="button" onClick={onCancel}>Cancel</button>
@@ -111,6 +139,7 @@ export function WidgetEditor({ value, version, onSave, onCancel }: { value: Widg
       <div className="card editor-preview">
         <div className="card-head"><h2>{w.title || 'Preview'}</h2></div>
         <WidgetView w={w} version={version} />
+        {w.note && <p className="widget-note">{w.note}</p>}
       </div>
     </div>
   );

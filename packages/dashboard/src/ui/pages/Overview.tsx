@@ -1,6 +1,7 @@
 import { series, topEvents, topVersion, total } from '../../data/queries';
 import { period, type Filters, type Range } from '../../data/sql';
 import { fmtChange, fmtCompact, fmtInt, fmtPct } from '../../lib/format';
+import { useCatalog } from '../../lib/catalog';
 import { go } from '../../lib/router';
 import { Bars } from '../charts/Bars';
 import { Legend } from '../charts/Legend';
@@ -34,6 +35,7 @@ export function Overview({ range, setRange, filters, setFilters, version }: Prop
     ]);
     return { events, users, perUser, top, byVersion, list };
   }, [range, filters, version]);
+  const cat = useCatalog();
   const d = res.data;
   const maxTotal = Math.max(1, ...(d?.list.map((t) => t.total) ?? []));
 
@@ -73,7 +75,7 @@ export function Overview({ range, setRange, filters, setFilters, version }: Prop
                   const trend = e.prev ? e.total / e.prev - 1 : null;
                   return (
                     <tr key={e.name} className="row-link" onClick={() => go({ page: 'event', name: e.name })}>
-                      <td><span className="ev"><code>{e.name}</code></span></td>
+                      <td><span className="ev"><code>{e.name}</code></span>{cat.events[e.name]?.description && <div className="ev-sub">{cat.events[e.name].description}</div>}</td>
                       <td className="num">{fmtInt(e.total)}</td>
                       <td className="num">{fmtInt(e.users)}</td>
                       <td className="bar-cell"><div className="mini-bar"><div style={{ width: `${Math.max(1.5, (e.total / maxTotal) * 100)}%` }} /></div></td>

@@ -2,7 +2,10 @@ export type Route =
   | { page: 'boards'; id?: string }
   | { page: 'overview' }
   | { page: 'event'; name?: string }
+  | { page: 'paths'; name?: string }
   | { page: 'experiments' }
+  | { page: 'catalog' }
+  | { page: 'settings' }
   | { page: 'data' };
 
 export function parseHash(hash: string): Route {
@@ -16,8 +19,14 @@ export function parseHash(hash: string): Route {
       return { page: 'overview' };
     case 'event':
       return { page: 'event', name: arg };
+    case 'paths':
+      return { page: 'paths', name: arg };
     case 'experiments':
       return { page: 'experiments' };
+    case 'catalog':
+      return { page: 'catalog' };
+    case 'settings':
+      return { page: 'settings' };
     case 'data':
       return { page: 'data' };
     default:
@@ -26,7 +35,7 @@ export function parseHash(hash: string): Route {
 }
 
 export function href(r: Route): string {
-  if (r.page === 'event' && r.name) return `#event/${encodeURIComponent(r.name)}`;
+  if ((r.page === 'event' || r.page === 'paths') && r.name) return `#${r.page}/${encodeURIComponent(r.name)}`;
   if (r.page === 'boards' && r.id) return `#boards/${encodeURIComponent(r.id)}`;
   return `#${r.page}`;
 }

@@ -1,16 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { restoreCache, saveCache } from '../data/cache';
 import { countEvents, insertEvents, stitchIdentities } from '../data/db';
-import { demoEvents } from '../lib/demo';
+import { applyBranding, brandingStore } from '../lib/branding';
+import { demoEvents, demoWorkspace } from '../lib/demo';
+import { applyShared, loadSharedWorkspace, parseWorkspace } from '../lib/workspace';
 import { readServerConfig, startLive } from '../data/live';
 import { syncApi, type ApiSource } from '../data/sources';
 import type { Filters, Range } from '../data/sql';
 import { parseHash, type Route } from '../lib/router';
 import { Boards } from './pages/Boards';
+import { Catalog } from './pages/Catalog';
 import { DataView } from './pages/DataView';
 import { EventView } from './pages/EventView';
 import { Experiments } from './pages/Experiments';
 import { Overview } from './pages/Overview';
+import { Paths } from './pages/Paths';
+import { Settings, type SharedInfo } from './pages/Settings';
 import { Sidebar } from './Sidebar';
 
 export interface Loaded {
@@ -36,6 +41,13 @@ export default function App() {
   const [filters, setFilters] = useState<Filters>({});
   const [loaded, setLoaded] = useState<Loaded>({ count: 0, version: 0 });
   const [booting, setBooting] = useState<string | null>('Starting DuckDB…');
+  const [sharedInfo, setShared] = useState<SharedInfo | null>(null);
+
+  // Branding is CSS variables, the tab title and the favicon: follow every change.
+  useEffect(() => {
+    applyBranding(brandingStore.get());
+    return brandingStore.subscribe(() => applyBranding(brandingStore.get()));
+  }, []);
 
   useEffect(() => {
     const on = () => setRoute(parseHash(location.hash));
@@ -77,28 +89,33 @@ export default function App() {
     },
   };
 
-  // Restore the events kept from the previous visit, then, when served by
+  // Apply the shared workspace first, so boards and branding are right on the first screen.
+  // Then restore the events kept from the previous visit and, when served by
   // `shipstat-dashboard`, connect to that server and follow it live.
   useEffect(() => {
     (async () => {
+      const demo = new URLSearchParams(location.search).has('demo');
+      const server = await readServerConfig();
+      const ws = server ? await loadSharedWorkspace(server) : demo ? parseWorkspace(demoWorkspace()) : null;
+      if (ws) setShared({ from: server ? (server.workspaceUrl ?? 'the server') : 'the demo', applied: applyShared(ws) });
       const meta = await restoreCache();
       if (meta) await refresh(meta.source, new Date(meta.savedAt));
       // `?demo`: the hosted demo opens straight on sample data.
-      if (new URLSearchParams(location.search).has('demo') && (await countEvents()) === 0) {
+      if (demo && (await countEvents()) === 0) {
         setBooting('Generating demo data…');
         await insertEvents(demoEvents());
         await stitchIdentities();
         await refresh('demo data');
         await saveCache('demo data');
       }
-      const server = await readServerConfig();
-      if (server) {
+      if (server?.source) {
+        const src = server.source;
         const label = server.name ?? location.host;
         setBooting(`Loading events from ${label}…`);
-        await syncApi(server.source, (n) => setBooting(`Loading events from ${label}… ${n.toLocaleString('en-US')}`));
+        await syncApi(src, (n) => setBooting(`Loading events from ${label}… ${n.toLocaleString('en-US')}`));
         await stitchIdentities();
         await refresh(label);
-        if (server.live) live.start(server.source, label);
+        if (server.live) live.start(src, label);
       }
       setBooting(null);
     })().catch(() => setBooting(null));
@@ -106,7 +123,7 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const needsData = loaded.count === 0 && route.page !== 'data';
+  const needsData = loaded.count === 0 && route.page !== 'data' && route.page !== 'settings' && route.page !== 'catalog';
   const shared = { range, setRange, filters, setFilters, version: loaded.version };
 
   return (
@@ -122,7 +139,10 @@ export default function App() {
             {route.page === 'boards' && <Boards id={route.id} version={loaded.version} />}
             {route.page === 'overview' && <Overview {...shared} />}
             {route.page === 'event' && <EventView name={route.name} {...shared} />}
+            {route.page === 'paths' && <Paths name={route.name} {...shared} />}
             {route.page === 'experiments' && <Experiments version={loaded.version} />}
+            {route.page === 'catalog' && <Catalog version={loaded.version} />}
+            {route.page === 'settings' && <Settings shared={sharedInfo} />}
             {route.page === 'data' && <DataView loaded={loaded} onLoaded={refresh} live={live} />}
           </>
         )}

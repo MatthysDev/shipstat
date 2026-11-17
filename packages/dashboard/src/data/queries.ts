@@ -1,4 +1,5 @@
 import { lit, query } from './db';
+import type { Direction, PathRow } from '../lib/paths';
 import { bucket, keyExpr, metricExpr, where, type FilterKey, type Filters, type Metric, type Period } from './sql';
 
 export interface SeriesPoint {
@@ -170,4 +171,71 @@ export async function feed(f: Filters, event?: string, limit = 12): Promise<Feed
     SELECT id, ts, name, CAST(props AS VARCHAR) props, variant, app_version, platform
     FROM events WHERE ${parts.join(' AND ')} ORDER BY ts DESC LIMIT ${limit}`);
   return rows.map((r) => ({ ...r, ts: new Date(r.ts) }));
+}
+
+export interface PathOptions {
+  event: string;
+  direction: Direction;
+  /** Steps after (or before) the event. */
+  depth: number;
+  /** A gap longer than this ends a session: paths never cross sessions. */
+  gapMinutes?: number;
+  /** `set_logged → set_logged → set_logged` counts as one step. */
+  collapse?: boolean;
+}
+
+/**
+ * Distinct paths from (or to) an event, one per user: each user's first occurrence of the
+ * event in the period, then the events that follow (or precede) it in the same session.
+ */
+export async function paths(p: Period, f: Filters, o: PathOptions): Promise<PathRow[]> {
+  const depth = Math.max(1, Math.min(6, Math.round(o.depth)));
+  const gap = Math.max(1, Math.round(o.gapMinutes ?? 30));
+  const step = o.direction === 'before' ? 'lag' : 'lead';
+  const cols = Array.from({ length: depth }, (_, i) => `${step}(name, ${i + 1}) OVER s AS e${i + 1}`).join(', ');
+  // Keeps the first occurrence: the one the path starts from (or the last one, for "before").
+  const pick = o.direction === 'before' ? 'ts DESC, id DESC' : 'ts, id';
+  const rows = await query<Record<string, string | number | null>>(`
+    WITH base AS (
+      SELECT id, uid, name, ts FROM events ${where(p.from, p.to, f)}
+    ), marked AS (
+      SELECT *, CASE WHEN ts - lag(ts) OVER u <= INTERVAL ${gap} MINUTE THEN 0 ELSE 1 END AS brk
+      FROM base WINDOW u AS (PARTITION BY uid ORDER BY ts, id)
+    ), sess AS (
+      SELECT *, sum(brk) OVER (PARTITION BY uid ORDER BY ts, id ROWS UNBOUNDED PRECEDING) AS sid FROM marked
+    ), steps AS (
+      SELECT * FROM sess
+      ${o.collapse === false ? '' : 'QUALIFY name IS DISTINCT FROM lag(name) OVER (PARTITION BY uid, sid ORDER BY ts, id)'}
+    ), seq AS (
+      SELECT uid, id, ts, name, ${cols} FROM steps WINDOW s AS (PARTITION BY uid, sid ORDER BY ts, id)
+    ), firsts AS (
+      SELECT * FROM seq WHERE name = ${lit(o.event)}
+      QUALIFY row_number() OVER (PARTITION BY uid ORDER BY ${pick}) = 1
+    )
+    SELECT ${Array.from({ length: depth }, (_, i) => `e${i + 1}`).join(', ')}, count(*) AS users
+    FROM firsts GROUP BY ALL ORDER BY users DESC`);
+  return rows.map((r) => ({ steps: Array.from({ length: depth }, (_, i) => (r[`e${i + 1}`] as string | null) ?? null), users: Number(r.users) }));
+}
+
+export interface CatalogRow {
+  name: string;
+  total: number;
+  users: number;
+  last: Date;
+  keys: string[];
+}
+
+/** Every event seen in the data, all time, with the props it carries. */
+export async function catalogStats(): Promise<CatalogRow[]> {
+  const rows = await query<{ name: string; total: number; users: number; last: Date; keys: string[] | null }>(`
+    SELECT name, count(*) total, count(DISTINCT uid) users, max(ts) AS last,
+      list_sort(list_distinct(flatten(list(json_keys(props))))) AS keys
+    FROM events GROUP BY name ORDER BY total DESC`);
+  return rows.map((r) => ({ ...r, last: new Date(r.last), keys: r.keys ? [...r.keys].map(String) : [] }));
+}
+
+/** Props an event carries (not context). */
+export async function propKeys(event: string): Promise<string[]> {
+  const rows = await query<{ k: string }>(`SELECT DISTINCT unnest(json_keys(props)) k FROM (SELECT props FROM events WHERE name = ${lit(event)} LIMIT 5000) ORDER BY 1`);
+  return rows.map((r) => r.k);
 }

@@ -1,7 +1,8 @@
 import type { Filters, Metric, Range } from '../data/sql';
+import type { Direction } from './paths';
 import { isArray, readJson, writeJson } from './storage';
 
-export type Viz = 'line' | 'bar' | 'number' | 'pie' | 'table' | 'funnel' | 'feed';
+export type Viz = 'line' | 'bar' | 'number' | 'pie' | 'table' | 'funnel' | 'paths' | 'feed';
 
 export const VIZ_LABELS: Record<Viz, string> = {
   line: 'Line',
@@ -10,6 +11,7 @@ export const VIZ_LABELS: Record<Viz, string> = {
   pie: 'Donut',
   table: 'Table',
   funnel: 'Funnel',
+  paths: 'Paths',
   feed: 'Live feed',
 };
 
@@ -28,6 +30,9 @@ export interface Widget {
   event?: string;
   /** Funnel steps, in order. */
   steps?: string[];
+  /** Paths: events after (or before) `event`, `depth` steps deep. */
+  direction?: Direction;
+  depth?: number;
   metric: Metric;
   /** Split by this key (context or prop). Empty = no split. */
   split?: string;
@@ -35,11 +40,15 @@ export interface Widget {
   filters: Filters;
   /** Width in columns, out of 3. */
   size: 1 | 2 | 3;
+  /** Plain text shown under the chart: what to read in it. */
+  note?: string;
 }
 
 export interface Board {
   id: string;
   name: string;
+  /** Plain text intro, so a board reads like a report. */
+  description?: string;
   widgets: Widget[];
 }
 

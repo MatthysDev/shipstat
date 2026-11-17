@@ -10,7 +10,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import zlib from 'node:zlib';
-import { demoEvents } from './demo.mjs';
+import { demoEvents, demoWorkspace } from './demo.mjs';
 
 const args = process.argv.slice(2);
 if (args[0] === 'import') {
@@ -22,13 +22,14 @@ const opt = (name, fallback) => {
   return i >= 0 && args[i + 1] ? args[i + 1] : fallback;
 };
 if (args.includes('--help') || args.includes('-h')) {
-  console.log('Usage: npx shipstat-dashboard [--port 8787] [--token <secret>] [--data <file.ndjson>] [--demo]\n\n  --demo   start with 45 days of sample events when the data file is empty\n\nImport your history:  npx shipstat-dashboard import --help');
+  console.log('Usage: npx shipstat-dashboard [--port 8787] [--token <secret>] [--data <file.ndjson>] [--demo]\n\n  --demo   start with 45 days of sample events when the data file is empty\n  --workspace <file.json>   share boards, event catalog and branding with everyone who opens the dashboard\n\nImport your history:  npx shipstat-dashboard import --help');
   process.exit(0);
 }
 
 const PORT = Number(opt('--port', process.env.PORT ?? 8787));
 const TOKEN = opt('--token', process.env.SHIPSTAT_TOKEN ?? '');
 const DATA = path.resolve(opt('--data', process.env.SHIPSTAT_DATA ?? 'shipstat-events.ndjson'));
+const WORKSPACE = opt('--workspace', process.env.SHIPSTAT_WORKSPACE ?? '');
 const DIST = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../dist');
 
 // --- Storage: an append-only NDJSON file, loaded in memory at start --------------------
@@ -138,8 +139,9 @@ const server = http.createServer(async (req, res) => {
   }
 
   // Lets a dashboard served from here connect to its own server without any setup.
+  // With --workspace, the file is read on every request so edits show on reload.
   if (url.pathname === '/shipstat.config.json') {
-    return json(res, 200, { source: { url: '/events/export', headerName: TOKEN ? 'Authorization' : '', headerValue: TOKEN ? `Bearer ${TOKEN}` : '' }, live: true, name: 'Local' });
+    return json(res, 200, { source: { url: '/events/export', headerName: TOKEN ? 'Authorization' : '', headerValue: TOKEN ? `Bearer ${TOKEN}` : '' }, live: true, name: 'Local', workspace: sharedWorkspace() });
   }
 
   // Reports from the example app's Perf lab.
@@ -154,6 +156,20 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'GET' && serveStatic(res, url.pathname)) return;
   json(res, 404, { error: 'not found' });
 });
+
+// Boards, event catalog and branding only: never data sources or credentials.
+function sharedWorkspace() {
+  if (!WORKSPACE) return args.includes('--demo') ? demoWorkspace() : undefined;
+  try {
+    const ws = JSON.parse(fs.readFileSync(path.resolve(WORKSPACE), 'utf8'));
+    // A bare tracking plan (`{ events }` or a list of events) is a catalog-only workspace.
+    const plan = Array.isArray(ws) ? ws : ws.events ? { events: ws.events, keys: ws.keys } : undefined;
+    return { shipstat: 'workspace', version: 1, branding: ws.branding, catalog: ws.catalog ?? plan, boards: ws.boards };
+  } catch (e) {
+    log(`workspace ${shortPath(path.resolve(WORKSPACE))} not served: ${e.message}`);
+    return undefined;
+  }
+}
 
 function shortPath(p) {
   const rel = path.relative(process.cwd(), p);
@@ -174,5 +190,5 @@ server.listen(PORT, () => {
   Dashboard        ${bold(`http://localhost:${PORT}`)}
   Endpoint         ${dim('simulator')}  http://localhost:${PORT}/events
                    ${dim('emulator ')}  http://10.0.2.2:${PORT}/events${lan ? `\n                   ${dim('device   ')}  http://${lan}:${PORT}/events` : ''}
-${TOKEN ? `  Auth             Authorization: Bearer ${TOKEN}\n` : ''}${fs.existsSync(DIST) ? '' : dim('\n  Dashboard not built: run `pnpm --filter shipstat-dashboard build`.\n')}`);
+${TOKEN ? `  Auth             Authorization: Bearer ${TOKEN}\n` : ''}${WORKSPACE ? `  Workspace        ${shortPath(path.resolve(WORKSPACE))}\n` : ''}${fs.existsSync(DIST) ? '' : dim('\n  Dashboard not built: run `pnpm --filter shipstat-dashboard build`.\n')}`);
 });

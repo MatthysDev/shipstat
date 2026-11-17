@@ -1,12 +1,15 @@
-import { breakdown, feed, funnel, series, total } from '../../data/queries';
+import { breakdown, feed, funnel, paths, series, total } from '../../data/queries';
 import { period } from '../../data/sql';
 import type { Widget } from '../../lib/boards';
 import { fmtChange, fmtCompact, fmtInt } from '../../lib/format';
+import { buildFlow } from '../../lib/paths';
+import { EventName } from '../EventDoc';
 import { Bars } from '../charts/Bars';
 import { Donut } from '../charts/Donut';
 import { Funnel } from '../charts/Funnel';
 import { Legend } from '../charts/Legend';
 import { Lines } from '../charts/Lines';
+import { PathFlow } from '../charts/PathFlow';
 import { Sparkline } from '../charts/Sparkline';
 import { useAsync } from '../hooks';
 
@@ -49,7 +52,7 @@ export function WidgetView({ w, version, height = 220 }: { w: Widget; version: n
             <tbody>
               {d.rows.map((r) => (
                 <tr key={r.value}>
-                  <td><code>{r.value}</code></td>
+                  <td>{!w.split || w.split === 'name' ? <EventName name={r.value} /> : <code>{r.value}</code>}</td>
                   <td className="num">{w.metric === 'per_user' ? r.n.toFixed(1) : fmtInt(r.n)}</td>
                   <td className="bar-cell"><div className="mini-bar"><div style={{ width: `${(r.n / max) * 100}%` }} /></div></td>
                 </tr>
@@ -61,13 +64,15 @@ export function WidgetView({ w, version, height = 220 }: { w: Widget; version: n
     }
     case 'funnel':
       return d.steps.length < 2 ? <p className="muted">Pick at least two steps.</p> : <Funnel steps={d.steps} data={d.data} />;
+    case 'paths':
+      return d.flow ? <PathFlow flow={d.flow} direction={w.direction ?? 'after'} height={height} onPick={(name) => location.assign(`#paths/${encodeURIComponent(name)}`)} /> : <p className="muted">Pick an event to start from.</p>;
     case 'feed':
       return (
         <ul className="feed">
           {d.rows.map((r) => (
             <li key={r.id}>
               <time className="mono">{r.ts.toLocaleTimeString('en-GB')}</time>
-              <code className="feed-name">{r.name}</code>
+              <EventName className="feed-name" name={r.name} />
               <span className="feed-tags">{[r.variant && `variant ${r.variant}`, r.app_version && `v${r.app_version}`, r.platform].filter(Boolean).join(' · ')}</span>
               <span className="feed-props">{propChips(r.props)}</span>
             </li>
@@ -109,6 +114,12 @@ async function load(w: Widget) {
     case 'funnel': {
       const steps = (w.steps ?? []).filter(Boolean);
       return { kind: 'funnel' as const, steps, data: steps.length >= 2 ? await funnel(p, w.filters, steps, w.split) : [] };
+    }
+    case 'paths': {
+      if (!w.event) return { kind: 'paths' as const, flow: null };
+      const depth = w.depth ?? 3;
+      const rows = await paths(p, w.filters, { event: w.event, direction: w.direction ?? 'after', depth });
+      return { kind: 'paths' as const, flow: buildFlow(w.event, rows, depth) };
     }
     case 'feed':
       return { kind: 'feed' as const, rows: await feed(w.filters, w.event) };

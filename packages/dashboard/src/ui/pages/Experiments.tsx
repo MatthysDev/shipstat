@@ -8,6 +8,7 @@ import { newId } from '../../lib/boards';
 import { downloadJson, isArray, readJson, writeJson } from '../../lib/storage';
 import { Legend } from '../charts/Legend';
 import { Lines } from '../charts/Lines';
+import { EventHint, EventOptions } from '../EventDoc';
 import { useAsync } from '../hooks';
 
 const KEY = 'shipstat.experiments.v1';
@@ -114,14 +115,16 @@ function Editor({ value, version, onSave, onCancel, onDelete }: { value: Experim
         <label className="field">Exposure event
           <select className="input" value={e.exposure} onChange={(x) => set({ exposure: x.target.value })}>
             <option value="">Choose…</option>
-            {(names.data ?? []).map((n) => <option key={n}>{n}</option>)}
+            <EventOptions names={names.data ?? []} />
           </select>
+          <EventHint name={e.exposure} />
         </label>
         <label className="field">Goal event
           <select className="input" value={e.goal} onChange={(x) => set({ goal: x.target.value })}>
             <option value="">Choose…</option>
-            {(names.data ?? []).map((n) => <option key={n}>{n}</option>)}
+            <EventOptions names={names.data ?? []} />
           </select>
+          <EventHint name={e.goal} />
         </label>
         <label className="field">Variant key (context or prop)<input className="input" value={e.variantKey} onChange={(x) => set({ variantKey: x.target.value })} /></label>
         <label className="field">Control value<input className="input" value={e.control} onChange={(x) => set({ control: x.target.value })} /></label>

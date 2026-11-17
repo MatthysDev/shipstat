@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { breakdown, breakdownKeys, eventNames, recentEvents, series, total } from '../../data/queries';
+import { breakdown, breakdownKeys, eventNames, propKeys, recentEvents, series, total } from '../../data/queries';
 import { period, type Filters, type Metric, type Range } from '../../data/sql';
 import { fmtAgo, fmtInt } from '../../lib/format';
 import { color } from '../../lib/palette';
@@ -7,6 +7,7 @@ import { go } from '../../lib/router';
 import { Legend } from '../charts/Legend';
 import { Lines } from '../charts/Lines';
 import { FilterBar, RangePicker } from '../FilterBar';
+import { EventDocCard, EventOptions } from '../EventDoc';
 import { useAsync } from '../hooks';
 
 interface Props {
@@ -27,6 +28,7 @@ export function EventView({ name: routeName, range, setRange, filters, setFilter
   const [metric, setMetric] = useState<Metric>('events');
 
   const keys = useAsync(() => (name ? breakdownKeys(name) : Promise.resolve([])), [name, version]);
+  const props = useAsync(() => (name ? propKeys(name) : Promise.resolve([])), [name, version]);
   const res = useAsync(async () => {
     if (!name) return null;
     const p = await period(range);
@@ -52,12 +54,16 @@ export function EventView({ name: routeName, range, setRange, filters, setFilter
       <div className="head">
         <div>
           <select className="chip event-picker" value={name ?? ''} onChange={(e) => go({ page: 'event', name: e.target.value })} aria-label="Event">
-            {(names.data ?? []).map((n) => <option key={n} value={n}>{n}</option>)}
+            <EventOptions names={names.data ?? []} />
           </select>
           {d && <p>{fmtInt(d.events.value)} events · {fmtInt(d.users.value)} users · last {range}</p>}
         </div>
-        <RangePicker range={range} setRange={setRange} />
+        <div className="row-actions">
+          {name && <a className="btn" href={`#paths/${encodeURIComponent(name)}`}>Paths from here</a>}
+          <RangePicker range={range} setRange={setRange} />
+        </div>
       </div>
+      {name && <EventDocCard key={name} name={name} props={props.data ?? []} />}
       <FilterBar filters={filters} setFilters={setFilters} version={version} />
       <div className="filters">
         <span className="muted">Split by</span>

@@ -1,9 +1,11 @@
 import type { FunnelStep } from '../../data/queries';
 import { fmtInt, fmtPct } from '../../lib/format';
 import { color } from '../../lib/palette';
+import { docLine, useCatalog } from '../../lib/catalog';
 
 /** Horizontal funnel; one bar per group when the funnel is split. */
 export function Funnel({ steps, data }: { steps: string[]; data: FunnelStep[] }) {
+  const cat = useCatalog();
   const groups = [...new Set(data.map((d) => d.group))];
   const value = (g: string, step: number) => data.find((d) => d.group === g && d.step === step)?.users ?? 0;
   const max = Math.max(1, ...groups.map((g) => value(g, 1)));
@@ -12,7 +14,7 @@ export function Funnel({ steps, data }: { steps: string[]; data: FunnelStep[] })
       {steps.map((name, i) => (
         <div key={name + i} className="funnel-step">
           <div className="funnel-label">
-            <span className="mono">{i + 1}. {name}</span>
+            <span className="mono" title={docLine(cat.events[name]) || undefined}>{i + 1}. {name}</span>
           </div>
           {groups.map((g, gi) => {
             const n = value(g, i + 1);

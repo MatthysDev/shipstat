@@ -1,1 +1,1 @@
-export { demoEvents } from '../../bin/demo.mjs';
+export { demoEvents, demoWorkspace } from '../../bin/demo.mjs';

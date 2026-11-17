@@ -73,3 +73,45 @@ export function demoEvents(days = 45, users = 3200, seed = 7, now = Date.now()) 
   }
   return out;
 }
+
+/**
+ * A shared workspace for the demo: the tracking plan of the fake fitness app and a board
+ * written as a report. Served by `shipstat-dashboard --demo` and applied by `?demo`.
+ */
+export function demoWorkspace() {
+  const w = (id, x) => ({ id: `demo-${id}`, metric: 'events', range: '30d', filters: {}, size: 1, ...x });
+  return {
+    shipstat: 'workspace',
+    version: 1,
+    catalog: {
+      events: {
+        app_opened: { description: 'The app came to the foreground: cold start or resume.', trigger: 'on launch and on every return from background', owner: 'Core', category: 'lifecycle' },
+        onboarding_step: { description: 'A screen of the onboarding was completed.', trigger: 'when the user taps Continue', owner: 'Growth', category: 'onboarding', props: { step: '1 to 4, in order' } },
+        workout_started: { description: 'The user started a workout from a program.', trigger: 'when the timer starts', owner: 'Training', category: 'engagement', props: { program_id: 'Program the workout belongs to', source: 'home (suggested) or plan (scheduled)' } },
+        set_logged: { description: 'One set of an exercise was saved.', trigger: 'when the user checks the set', owner: 'Training', category: 'engagement', props: { exercise: 'Exercise slug', reps: 'Repetitions done', weight: 'Load in kg' } },
+        paywall_viewed: { description: 'The paywall sheet was shown. Exposure event of the paywall test.', trigger: 'when the sheet finishes opening', owner: 'Growth', category: 'monetization', props: { placement: 'Where it opened: onboarding_end, settings or locked_feature' } },
+        purchase_done: { description: 'A subscription was paid and confirmed by the store.', trigger: 'after the store receipt is validated', owner: 'Growth', category: 'monetization', props: { plan: 'monthly or yearly', price: 'Price paid, in currency', currency: 'ISO code' } },
+      },
+      keys: {
+        variant: 'Paywall test arm, A (control) or B (new paywall)',
+        feature: 'Experiment the variant belongs to',
+        app_version: 'Marketing version of the app',
+      },
+    },
+    boards: [
+      {
+        id: 'demo-report',
+        name: 'Paywall report',
+        description: 'Does the new paywall (B) sell more than the old one (A)? Read top to bottom: reach, what people do after seeing it, and conversion per arm. Updated live from the app.',
+        widgets: [
+          w('users', { title: 'People who saw the paywall', viz: 'number', metric: 'users', event: 'paywall_viewed', note: 'Exposure: everyone counted in the test.' }),
+          w('buyers', { title: 'Buyers', viz: 'number', metric: 'users', event: 'purchase_done' }),
+          w('placement', { title: 'Where the paywall opens', viz: 'pie', split: 'placement', metric: 'users', event: 'paywall_viewed', note: 'Most exposures come from the end of onboarding.' }),
+          w('after', { title: 'After the paywall', viz: 'paths', event: 'paywall_viewed', direction: 'after', depth: 3, metric: 'users', size: 3, note: 'Most people close the app or go back to training; the purchase branch is the one to grow.' }),
+          w('funnel', { title: 'Conversion by variant', viz: 'funnel', steps: ['app_opened', 'paywall_viewed', 'purchase_done'], split: 'variant', metric: 'users', size: 2, note: 'B converts better at the last step; see A/B tests for the probability.' }),
+          w('buyers-variant', { title: 'Buyers per day by variant', viz: 'line', split: 'variant', metric: 'users', event: 'purchase_done' }),
+        ],
+      },
+    ],
+  };
+}

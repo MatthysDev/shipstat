@@ -1,16 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { eventNames } from '../../data/queries';
+import { useBranding } from '../../lib/branding';
 import { blankWidget, isBoard, loadBoards, newId, saveBoards, starterBoard, type Board, type Widget } from '../../lib/boards';
 import { go } from '../../lib/router';
 import { downloadJson } from '../../lib/storage';
 import { WidgetEditor } from '../widgets/WidgetEditor';
 import { WidgetView } from '../widgets/WidgetView';
+import { ShareButton } from './Settings';
 
 export function Boards({ id, version }: { id?: string; version: number }) {
   const [boards, setBoards] = useState<Board[]>(loadBoards);
   const [editing, setEditing] = useState<Widget | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const branding = useBranding();
 
   const update = (next: Board[]) => {
     setBoards(next);
@@ -30,7 +33,7 @@ export function Boards({ id, version }: { id?: string; version: number }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [version]);
 
-  const board = boards.find((b) => b.id === id) ?? boards[0];
+  const board = boards.find((b) => b.id === id) ?? boards.find((b) => b.id === branding.defaultBoard) ?? boards[0];
   if (!board) return <div className="loading">Preparing your first board…</div>;
 
   const setBoard = (b: Board) => update(boards.map((x) => (x.id === b.id ? b : x)));
@@ -85,15 +88,24 @@ export function Boards({ id, version }: { id?: string; version: number }) {
       <div className="head">
         <div>
           <input className="title-input" value={board.name} onChange={(e) => setBoard({ ...board, name: e.target.value })} aria-label="Board name" />
-          <p>Build your own view: every chart is a query on your events, saved in this browser.</p>
         </div>
         <div className="row-actions">
           <button className="btn" type="button" onClick={() => fileRef.current?.click()}>Import</button>
           <button className="btn" type="button" onClick={() => downloadJson(`shipstat-board-${board.name}.json`, board)}>Export</button>
+          <ShareButton url={`${location.origin}${location.pathname}#boards/${encodeURIComponent(board.id)}`} />
           <button className="btn primary" type="button" onClick={() => setEditing(blankWidget())}>Add chart</button>
           <input ref={fileRef} type="file" accept="application/json" hidden onChange={(e) => e.target.files?.[0] && importBoards(e.target.files[0])} />
         </div>
       </div>
+
+      <textarea
+        className="board-desc"
+        rows={1}
+        value={board.description ?? ''}
+        onChange={(e) => setBoard({ ...board, description: e.target.value || undefined })}
+        placeholder="Add an intro: what this board answers and how to read it. Every chart is a query on your events."
+        aria-label="Board description"
+      />
 
       <div className="tabs">
         {boards.map((b) => (
@@ -131,6 +143,7 @@ export function Boards({ id, version }: { id?: string; version: number }) {
                 </div>
               </div>
               <WidgetView w={w} version={version} />
+              {w.note && <p className="widget-note">{w.note}</p>}
             </section>
           ))}
         </div>
@@ -147,6 +160,7 @@ export function Boards({ id, version }: { id?: string; version: number }) {
 
 function describe(w: Widget): string {
   if (w.viz === 'feed') return [w.event ?? 'all events', 'newest first'].join(' · ');
+  if (w.viz === 'paths') return [`${w.direction === 'before' ? 'ending at' : 'starting at'} ${w.event ?? '…'}`, `${w.depth ?? 3} steps`, 'users', w.range].join(' · ');
   const what = w.viz === 'funnel' ? (w.steps ?? []).filter(Boolean).join(' → ') : w.event ?? 'all events';
   const metric = { events: 'events', users: 'users', per_user: 'events / user' }[w.metric];
   const filters = Object.entries(w.filters).filter(([, v]) => v).map(([k, v]) => `${k}=${v}`);
