@@ -1,6 +1,10 @@
 # Changelog
 
-## 0.1.0 (unreleased)
+## Unreleased
+
+- `shipstat/vexo`: drop-in replacement for `vexo-analytics` (`vexo`, `customEvent`, `identifyDevice`, `enableTracking`, `disableTracking`, `trackScreen`, `trackError`; replay and heatmap calls are accepted and ignored).
+
+## 0.1.0
 
 - Writes are batched: a burst of `track()` calls becomes one SQLite transaction with a reused statement (≈ 23× less disk time per event in bursts).
 - `compress: true` gzips each batch (`Content-Encoding: gzip`), typically 10–20× fewer bytes on the network.
