@@ -4,5 +4,6 @@
   "scripts": {
     "build": "node build.mjs",
     "preview": "node build.mjs && npx --yes serve dist"
-  }
+  },
+  "type": "module"
 }

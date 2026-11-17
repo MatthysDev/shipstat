@@ -27,6 +27,7 @@
     <a href="#setup">Setup</a>
     <a href="#examples">Examples</a>
     <a href="#performance">Performance</a>
+    <a href="#compare">Compare</a>
     <a href="#ai">For AI</a>
     <a href="https://github.com/MatthysDev/shipstat">GitHub</a>
   </nav>
@@ -168,6 +169,66 @@ Shipstat.<span class="f">track</span>(<span class="s">'purchase_done'</span>);</
     <p class="note">Median of 10 000 calls timed one by one, several runs, release builds on the iOS simulator and the Android emulator. Method, raw data and recordings in the <a href="https://github.com/MatthysDev/shipstat/tree/main/docs/perf">performance study</a>.</p>
   </section>
 
+  <section id="compare" class="wrap section">
+    <p class="eyebrow">Compared</p>
+    <h2>Lighter than Vexo and PostHog. <span class="hand">Flat</span> as you grow.</h2>
+    <p class="lead left">Same app, same run, each SDK set up the way its docs show. Median cost of one call on the JS thread, iOS release build.</p>
+    <div class="bars" role="img" aria-label="Median cost of one call: Shipstat 1.6 µs, Vexo 3.8 µs, PostHog 113 µs">
+      <div class="bar-row"><span>Shipstat</span><div class="bar-track"><div class="bar-fill accent" style="width:1.4%"></div></div><b>1.6 µs</b></div>
+      <div class="bar-row"><span>Vexo 1.14</span><div class="bar-track"><div class="bar-fill" style="width:3.4%"></div></div><b>3.8 µs</b></div>
+      <div class="bar-row"><span>PostHog RN 4.87</span><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><b>113 µs</b></div>
+    </div>
+    <p class="note">At 6 000 events per second, PostHog dropped to 43 fps; Shipstat and Vexo held 60. Vexo's call returns early and finishes its work asynchronously in JavaScript, so its number flatters it. Host shared with other simulators: read the ratios. <a href="https://github.com/MatthysDev/shipstat/blob/main/docs/compare.md">Method and raw data</a>.</p>
+
+    <div class="calc">
+      <div class="calc-in">
+        <label>Monthly active users <output id="c-users-out">50,000</output>
+          <input id="c-users" type="range" min="0" max="100" value="56">
+        </label>
+        <label>Events per user per month
+          <input id="c-epu" type="number" min="1" max="10000" value="100">
+        </label>
+        <label class="check"><input id="c-ident" type="checkbox" checked> Users sign in <small>PostHog bills identified events twice</small></label>
+        <label>Vexo: billable events per custom event
+          <select id="c-auto"><option value="1">1, custom events only</option><option value="2">2</option><option value="3" selected>3, with taps and screens</option><option value="5">5</option></select>
+        </label>
+      </div>
+      <div class="calc-out" aria-live="polite">
+        <p class="calc-events"><b id="c-events">5 M</b> events a month</p>
+        <div class="bar-row"><span>Shipstat</span><div class="bar-track"><div id="c-b-ship" class="bar-fill accent"></div></div><b id="c-ship">$7</b></div>
+        <div class="bar-row"><span>Vexo</span><div class="bar-track"><div id="c-b-vexo" class="bar-fill"></div></div><b id="c-vexo">$0</b></div>
+        <div class="bar-row"><span>PostHog</span><div class="bar-track"><div id="c-b-ph" class="bar-fill"></div></div><b id="c-ph">$0</b></div>
+        <p class="note">Per month, public price lists checked on 2026-11-17. Shipstat: one small server (Hetzner CX23, ≈ $7) per 10 M events, your time not counted. Below ~5 000 users, every option is free: Shipstat's case there is speed and owning the data.</p>
+      </div>
+    </div>
+
+    <div class="switch">
+      <div>
+        <h3>Coming from Vexo?</h3>
+        <p>Change one import, put your endpoint where the key was. Every Vexo call keeps working.</p>
+        <pre><code><span class="del">- import { vexo, customEvent } from 'vexo-analytics';</span>
+<span class="add">+ import { vexo, customEvent } from 'shipstat/vexo';</span>
+
+<span class="del">- vexo('YOUR_VEXO_KEY');</span>
+<span class="add">+ vexo('https://stats.example.com/events');</span></code></pre>
+        <a class="btn" href="https://github.com/MatthysDev/shipstat/blob/main/docs/migrate/vexo.md">Vexo migration guide</a>
+      </div>
+      <div>
+        <h3>Keep your history</h3>
+        <p>One command pulls your past events from Vexo's or PostHog's export API. Run it twice, nothing is duplicated.</p>
+        <pre><code><span class="c"># from Vexo</span>
+npx shipstat-dashboard import vexo \
+  --app &lt;id&gt; --token vexo_pat_…
+
+<span class="c"># from PostHog</span>
+npx shipstat-dashboard import posthog \
+  --project &lt;id&gt; --key phx_…</code></pre>
+        <a class="btn" href="https://github.com/MatthysDev/shipstat/blob/main/docs/migrate/posthog.md">PostHog migration guide</a>
+      </div>
+    </div>
+    <p class="note">What you give up: session replay, heatmaps, crash reporting and remote feature flags. Keep a tool for those if you use them. <a href="https://github.com/MatthysDev/shipstat/blob/main/docs/compare.md">Full comparison</a>.</p>
+  </section>
+
   <section id="ai" class="wrap section">
     <p class="eyebrow">For AI assistants</p>
     <h2>Let your AI do the <span class="hand">integration</span>.</h2>
@@ -218,6 +279,27 @@ Shipstat.<span class="f">track</span>(<span class="s">'purchase_done'</span>);</
   <a href="https://github.com/MatthysDev/shipstat">GitHub</a>
 </footer>
 
+<script type="module">
+  import { compare } from './costs.js';
+  const $ = (id) => document.getElementById(id);
+  // Slider 0–100 → 1 000 to 1 000 000 users, on a log scale.
+  const usersAt = (v) => Math.round(Math.pow(10, 3 + (3 * v) / 100) / 1000) * 1000 || 1000;
+  const usd = (n) => (n < 1 ? '$0' : '$' + Math.round(n).toLocaleString('en-US'));
+  const short = (n) => (n >= 1e6 ? +(n / 1e6).toFixed(1) + ' M' : Math.round(n / 1e3) + ' k');
+  function update() {
+    const users = usersAt(+$('c-users').value);
+    const r = compare({ users, eventsPerUser: Math.max(1, +$('c-epu').value || 100), identifiedShare: $('c-ident').checked ? 1 : 0, vexoAutoFactor: +$('c-auto').value });
+    $('c-users-out').textContent = users.toLocaleString('en-US');
+    $('c-events').textContent = short(r.events);
+    const max = Math.max(r.shipstat, r.vexo, r.posthog, 1);
+    for (const [k, id] of [['shipstat', 'ship'], ['vexo', 'vexo'], ['posthog', 'ph']]) {
+      $('c-' + id).textContent = usd(r[k]);
+      $('c-b-' + id).style.width = (100 * r[k]) / max + '%';
+    }
+  }
+  for (const id of ['c-users', 'c-epu', 'c-ident', 'c-auto']) $(id).addEventListener('input', update);
+  update();
+</script>
 <script>
   for (const b of document.querySelectorAll('[data-copy-url]')) {
     b.addEventListener('click', async () => {

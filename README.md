@@ -10,7 +10,7 @@
 Open source analytics & A/B testing for React Native and Expo.<br>
 Track the events you choose. Split any number by release and variant. Your data stays on your API.
 
-[Setup](#setup) · [Examples](#examples) · [Dashboard](#dashboard) · [Performance](#performance) · [For AI assistants](#for-ai-assistants) · [Event format](#event-format)
+[Setup](#setup) · [Examples](#examples) · [Dashboard](#dashboard) · [Performance](#performance) · [Compared](#compared-to-vexo-and-posthog) · [For AI assistants](#for-ai-assistants) · [Event format](#event-format)
 
 <a href="docs/media/promo.mp4"><img src="docs/media/promo.gif" width="860" alt="A tap in the app, the event on the dashboard, live"></a>
 
@@ -124,6 +124,35 @@ Added to every event: `app_version`, `build`, `ota`, `platform`, `os_version`, `
 `track()` is a JSON string and a single JSI call. Ids, context, SQLite and the network run on a native background queue. [Method, raw data and recordings](docs/perf/README.md).
 
 <img src="docs/perf/latency.svg" width="680" alt="track() cost compared with a naive JS SDK">
+
+## Compared to Vexo and PostHog
+
+Same app, same run, each SDK set up the way its docs show (iOS release build, median of 10 000 calls):
+
+| | One call on the JS thread | At 6 000 events/s |
+|---|---|---|
+| **Shipstat** | **1.6 µs** | 60 fps |
+| Vexo 1.14 | 3.8 µs, then async work in JS | 60 fps |
+| PostHog RN 4.87 | 113 µs | 43 fps |
+
+Monthly cost at 100 custom events per active user, public prices checked on 2026-11-17 ([`node scripts/costs.mjs`](scripts/costs.mjs)):
+
+| Active users | Shipstat | Vexo | PostHog |
+|---|---|---|---|
+| 10,000 | $7 | $15–75 | $0 |
+| 100,000 | $7 | $285–725 | $324–1,080 |
+| 500,000 | $35 | $1,165–2,765 | $1,528–3,893 |
+
+Ranges: Vexo also bills the taps, screens and requests it captures; PostHog bills identified events twice. Shipstat is one small server. What you give up: session replay, heatmaps, crash reporting, remote feature flags. [Full comparison](docs/compare.md).
+
+**Switching keeps your history.** `shipstat/vexo` is a drop-in for `vexo-analytics` (change the import, put your endpoint where the key was), and one command imports your past events:
+
+```sh
+npx shipstat-dashboard import vexo --app <id> --token vexo_pat_...
+npx shipstat-dashboard import posthog --project <id> --key phx_...
+```
+
+Guides: [from Vexo](docs/migrate/vexo.md) · [from PostHog](docs/migrate/posthog.md).
 
 ## For AI assistants
 
