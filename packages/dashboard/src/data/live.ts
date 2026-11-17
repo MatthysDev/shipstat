@@ -28,6 +28,8 @@ export function startLive(src: ApiSource, cursor: string, onNew: (added: number)
 export interface ServerConfig {
   /** Absent on a static host that only shares a workspace. */
   source?: ApiSource;
+  /** The read endpoint needs a key the server does not give out: ask the person once. */
+  needsKey?: boolean;
   live?: boolean;
   name?: string;
   /** Shared workspace (boards, catalog, branding), inline or by URL. */
@@ -48,8 +50,28 @@ export async function readServerConfig(): Promise<ServerConfig | null> {
     const source = v.source && typeof v.source.url === 'string' ? v.source : undefined;
     const workspaceUrl = typeof v.workspaceUrl === 'string' ? v.workspaceUrl : undefined;
     if (!source && !v.workspace && !workspaceUrl) return null;
-    return { ...v, source, workspaceUrl };
+    return { ...v, source, workspaceUrl, needsKey: v.needsKey === true };
   } catch {
     return null;
+  }
+}
+
+/** Read keys typed by the person, per server, kept in this browser only. */
+const KEY_STORE = 'shipstat.readKey';
+
+export function savedReadKey(): string | null {
+  try {
+    return localStorage.getItem(`${KEY_STORE}:${location.origin}`);
+  } catch {
+    return null;
+  }
+}
+
+export function saveReadKey(key: string | null): void {
+  try {
+    if (key) localStorage.setItem(`${KEY_STORE}:${location.origin}`, key);
+    else localStorage.removeItem(`${KEY_STORE}:${location.origin}`);
+  } catch {
+    // Private mode: asked again next time.
   }
 }

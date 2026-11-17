@@ -4,7 +4,7 @@ import { countEvents, insertEvents, stitchIdentities } from '../data/db';
 import { applyBranding, brandingStore } from '../lib/branding';
 import { demoEvents, demoWorkspace } from '../lib/demo';
 import { applyShared, loadSharedWorkspace, parseWorkspace } from '../lib/workspace';
-import { readServerConfig, startLive } from '../data/live';
+import { readServerConfig, saveReadKey, savedReadKey, startLive } from '../data/live';
 import { syncApi, type ApiSource } from '../data/sources';
 import type { Filters, Range } from '../data/sql';
 import { parseHash, type Route } from '../lib/router';
@@ -42,6 +42,8 @@ export default function App() {
   const [loaded, setLoaded] = useState<Loaded>({ count: 0, version: 0 });
   const [booting, setBooting] = useState<string | null>('Starting DuckDB…');
   const [sharedInfo, setShared] = useState<SharedInfo | null>(null);
+  const [keyPrompt, setKeyPrompt] = useState<{ error?: string; resolve: (key: string) => void } | null>(null);
+  const askKey = (error?: string) => new Promise<string>((resolve) => setKeyPrompt({ error, resolve }));
 
   // Branding is CSS variables, the tab title and the favicon: follow every change.
   useEffect(() => {
@@ -109,10 +111,29 @@ export default function App() {
         await saveCache('demo data');
       }
       if (server?.source) {
-        const src = server.source;
+        let src = server.source;
         const label = server.name ?? location.host;
-        setBooting(`Loading events from ${label}…`);
-        await syncApi(src, (n) => setBooting(`Loading events from ${label}… ${n.toLocaleString('en-US')}`));
+        let key = server.needsKey ? savedReadKey() : null;
+        for (let attempt = 0; ; attempt++) {
+          if (server.needsKey) {
+            if (!key) {
+              setBooting(null);
+              key = await askKey(attempt > 0 ? 'That key was refused.' : undefined);
+              setKeyPrompt(null);
+            }
+            src = { ...server.source, headerName: 'Authorization', headerValue: `Bearer ${key}` };
+          }
+          setBooting(`Loading events from ${label}…`);
+          try {
+            await syncApi(src, (n) => setBooting(`Loading events from ${label}… ${n.toLocaleString('en-US')}`));
+            if (key) saveReadKey(key);
+            break;
+          } catch (e) {
+            if (!server.needsKey || !String(e instanceof Error ? e.message : e).startsWith('401')) throw e;
+            saveReadKey(null);
+            key = null;
+          }
+        }
         await stitchIdentities();
         await refresh(label);
         if (server.live) live.start(src, label);
@@ -130,7 +151,9 @@ export default function App() {
     <div className="app">
       <Sidebar route={route} loaded={loaded} />
       <main className="main">
-        {booting ? (
+        {keyPrompt ? (
+          <KeyPrompt error={keyPrompt.error} onKey={keyPrompt.resolve} />
+        ) : booting ? (
           <div className="loading">{booting}</div>
         ) : needsData ? (
           <Empty waiting={!!loaded.live} />
@@ -148,6 +171,27 @@ export default function App() {
         )}
       </main>
     </div>
+  );
+}
+
+function KeyPrompt({ error, onKey }: { error?: string; onKey: (key: string) => void }) {
+  const [value, setValue] = useState('');
+  return (
+    <form
+      className="card empty"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (value.trim()) onKey(value.trim());
+      }}
+    >
+      <h2>Read key</h2>
+      <p>This server keeps its events behind a key. Ask whoever runs it, paste it here: it stays in this browser.</p>
+      <div style={{ display: 'flex', gap: 8, maxWidth: 420, margin: '0 auto' }}>
+        <input className="input" type="password" autoFocus autoComplete="off" value={value} onChange={(e) => setValue(e.target.value)} aria-label="Read key" />
+        <button className="btn primary" type="submit" disabled={!value.trim()}>Open</button>
+      </div>
+      {error && <p role="alert" style={{ color: 'var(--accent)', marginTop: 12 }}>{error}</p>}
+    </form>
   );
 }
 

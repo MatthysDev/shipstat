@@ -1,7 +1,8 @@
-// `npx shipstat-dashboard import ...`: brings PostHog or Vexo history into a Shipstat data file.
+// `npx shipstat-dashboard import ...`: brings PostHog or Vexo history into a Shipstat data folder.
 import fs from 'node:fs';
 import path from 'node:path';
 import { exportPostHog, fetchPostHog, fetchVexo, fromPostHog, fromVexo, readRows } from './import.mjs';
+import { hashId, openStore } from './store.mjs';
 
 const HELP = `Import your history into Shipstat. Running it twice never duplicates events.
 
@@ -29,8 +30,9 @@ const HELP = `Import your history into Shipstat. Running it twice never duplicat
     npx shipstat-dashboard import vexo --file vexo-export.csv
 
   Where the events go:
-    --data <file.ndjson>      the file \`npx shipstat-dashboard\` reads (default: shipstat-events.ndjson)
-    --out <file.ndjson>       write a separate NDJSON file instead, to load into your own database
+    --data <folder>           the folder \`npx shipstat-dashboard\` reads (default: shipstat-data).
+                              Stop the server first: one process writes to a folder at a time.
+    --out <file.ndjson>       write a plain NDJSON file instead, to load into your own database
     --dry-run                 read and convert, write nothing, print a summary
 
   Keys: PostHog personal API key (Settings → Personal API keys), Vexo personal access token
@@ -49,15 +51,32 @@ export async function runImport(argv) {
   }
 
   const dry = argv.includes('--dry-run');
-  const outFile = path.resolve(opt('--out') ?? opt('--data') ?? process.env.SHIPSTAT_DATA ?? 'shipstat-events.ndjson');
+  const outFile = path.resolve(opt('--out') ?? opt('--data') ?? process.env.SHIPSTAT_DATA ?? 'shipstat-data');
+  // A .ndjson path is a plain file (for your own database); anything else is a server folder.
+  const plain = /\.(nd)?jsonl?$/i.test(outFile) || (fs.existsSync(outFile) && fs.statSync(outFile).isFile());
+  // Hashes of every id already there, so a second run adds nothing (8 bytes each, not a string).
   const seen = new Set();
-  if (!dry && fs.existsSync(outFile)) {
+  let store = null;
+  if (!dry && plain && fs.existsSync(outFile)) {
     for (const line of fs.readFileSync(outFile, 'utf8').split('\n')) {
       if (!line) continue;
       try {
-        seen.add(JSON.parse(line).id);
+        seen.add(hashId(JSON.parse(line).id));
       } catch {
         // Partial last line: ignored, like the server does.
+      }
+    }
+  } else if (!dry && !plain) {
+    try {
+      store = openStore(outFile);
+    } catch (e) {
+      return fail(e.message);
+    }
+    for await (const line of store.lines()) {
+      try {
+        seen.add(hashId(JSON.parse(line).id));
+      } catch {
+        // Not an event line.
       }
     }
   }
@@ -92,9 +111,12 @@ export async function runImport(argv) {
   let skipped = 0;
   let dupes = 0;
   let buffer = '';
+  let batch = [];
   const flush = () => {
-    if (buffer && !dry) fs.appendFileSync(outFile, buffer);
+    if (!dry && store && batch.length) store.append(batch);
+    else if (!dry && buffer) fs.appendFileSync(outFile, buffer);
     buffer = '';
+    batch = [];
   };
   try {
     for await (const row of rows) {
@@ -104,23 +126,29 @@ export async function runImport(argv) {
         skipped++;
         continue;
       }
-      if (seen.has(e.id)) {
+      const h = hashId(e.id);
+      if (seen.has(h)) {
         dupes++;
         continue;
       }
-      seen.add(e.id);
+      seen.add(h);
       counts.set(e.name, (counts.get(e.name) ?? 0) + 1);
-      buffer += JSON.stringify({ ...e, received_at: new Date().toISOString() }) + '\n';
+      if (store) batch.push(e);
+      else buffer += JSON.stringify({ ...e, received_at: new Date().toISOString() }) + '\n';
       added++;
-      if (buffer.length > 1 << 20) flush();
+      if (buffer.length > 1 << 20 || batch.length >= 10_000) flush();
     }
   } catch (err) {
     flush();
+    await store?.idle();
+    store?.close();
     process.stderr.write('\n');
     // Everything written so far is kept: run the same command again to resume.
     return fail(`${err.message}\n  ${added} events were saved; run the same command again to continue.`);
   }
   flush();
+  await store?.idle();
+  store?.close();
   process.stderr.write('\n');
 
   const top = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12);

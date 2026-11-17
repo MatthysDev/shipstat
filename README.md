@@ -42,7 +42,7 @@ Shipstat.track('paywall_viewed', { placement: 'onboarding_end' });
 npx shipstat-dashboard
 ```
 
-One command: it receives events on `:8787/events`, stores them in `shipstat-events.ndjson`, and serves the dashboard at `http://localhost:8787`, already connected and live. Add `--demo` to start with 45 days of sample data.
+One command: it receives events on `:8787/events`, stores them compressed in `./shipstat-data`, and serves the dashboard at `http://localhost:8787`, already connected and live. Add `--demo` to start with 45 days of sample data.
 
 | Running on | Endpoint |
 |---|---|
@@ -52,7 +52,17 @@ One command: it receives events on `:8787/events`, stores them in `shipstat-even
 
 Set context **before** the first `track()`: React runs child effects before parent effects, so a `setContext` inside a top-level `useEffect` misses the first events of your screens. Call it at module level or in a `useState` initializer.
 
-In production, point `endpoint` at your own API and add your auth header: `init({ endpoint, headers: { Authorization: … } })`. It needs a development build or bare React Native; it does not run in Expo Go.
+It needs a development build or bare React Native; it does not run in Expo Go.
+
+**In production**, run the same command on any small server (a €6 VPS, Railway, Fly.io…) with two keys, or point `endpoint` at your own API:
+
+```sh
+npx shipstat-dashboard --token <send-key> --read-token <read-key> --retention-days 400
+```
+
+- The send key goes in the app: `init({ endpoint, headers: { Authorization: 'Bearer <send-key>' } })`. It can only send, so it does not matter that an app can be unpacked.
+- The read key opens the dashboard. It is asked once per browser and the server never hands it out.
+- Events are stored in compressed blocks, ~50 bytes each; the process stays ~75 MB of memory whatever the volume. `npx shipstat-dashboard dump > backup.ndjson` exports everything.
 
 ## Examples
 
@@ -115,7 +125,7 @@ The dashboard is open source and runs in the browser, so you can shape it into t
 
 | | |
 |---|---|
-| `init(config)` | `endpoint` (required), `headers`, `flushAt` (50), `flushIntervalMs` (10 000), `maxQueueSize` (10 000), `enabled` (true), `debug`. Events tracked before `init` are kept. |
+| `init(config)` | `endpoint` (required), `headers`, `flushAt` (50), `flushIntervalMs` (30 000), `maxQueueSize` (10 000), `enabled` (true), `compress` (true), `debug`. Events tracked before `init` are kept. |
 | `track(name, props?)` | Flat props: strings, numbers, booleans, `null`, or arrays of them. Never throws. |
 | `setContext(ctx)` · `unsetContext(...keys)` | Tags added to every following event. Persisted. |
 | `identify(userId \| null)` | Your user id; `null` on sign-out. |
@@ -131,7 +141,8 @@ Added to every event: `app_version`, `build`, `ota`, `platform`, `os_version`, `
 | **≈ 1 µs** | per `track()` on the JS thread (release, median), 6–7× less than a minimal pure-JS client |
 | **1.3 KB** | of JavaScript, gzipped, zero runtime dependencies |
 | **23×** | less disk time per event: a burst of calls shares one SQLite transaction |
-| **10–20×** | fewer bytes on the network with `compress: true` |
+| **10–20×** | fewer bytes on the network: batches are gzipped |
+| **0** | wake-ups while no event waits; sends are grouped every 30 s and on background, so the radio wakes up rarely |
 | **< 1 s** | for 5 000 events to reach the server |
 
 `track()` is a JSON string and a single JSI call. Ids, context, SQLite and the network run on a native background queue. [Method, raw data and recordings](docs/perf/README.md).
@@ -153,10 +164,10 @@ Monthly cost at 100 custom events per active user, public prices checked on 2026
 | Active users | Shipstat | Vexo | PostHog |
 |---|---|---|---|
 | 10,000 | $7 | $15–75 | $0 |
-| 100,000 | $9 | $285–725 | $324–1,080 |
-| 500,000 | $40 | $1,165–2,765 | $1,528–3,893 |
+| 100,000 | $7 | $285–725 | $324–1,080 |
+| 500,000 | $7 | $1,165–2,765 | $1,528–3,893 |
 
-Ranges: Vexo also bills the taps, screens and requests it captures; PostHog bills identified events twice. Shipstat is one small server plus its disk. What you give up: session replay, heatmaps, crash reporting, remote feature flags. [Full comparison](docs/compare.md).
+Ranges: Vexo also bills the taps, screens and requests it captures; PostHog bills identified events twice. Shipstat is one small server: events take ~50 bytes each on its disk. The dashboard loads every stored event into the browser, comfortable up to a few million events; queries on the server, for larger apps, are planned. What you give up: session replay, heatmaps, crash reporting, remote feature flags. [Full comparison](docs/compare.md).
 
 **Switching keeps your history.** `shipstat/vexo` is a drop-in for `vexo-analytics`, a codemod makes the switch, and one command imports your past events:
 
