@@ -98,6 +98,19 @@ A static site. It loads your events and queries them in the browser with [DuckDB
   <img src="docs/media/editor-light.png" alt="Chart editor with live preview" width="860">
 </picture>
 
+### Make it yours, share it
+
+The dashboard is open source and runs in the browser, so you can shape it into the report your team reads:
+
+- **Branding**: name, logo, accent color; boards with a description and a note under each chart.
+- **Event catalog**: what each event means, when it fires, who owns it. Load your tracking plan or write it inline; events without a description are flagged.
+- **User paths**: what people do after (or before) any event, per session, with drop-off.
+- **One link for the team**: boards, catalog and branding export to one workspace file. `npx shipstat-dashboard --workspace team.json` serves it, and everyone who opens the dashboard gets the same boards.
+
+<picture>
+  <img src="docs/media/paths-light.png" alt="User paths after app_opened" width="860">
+</picture>
+
 ## API
 
 | | |
