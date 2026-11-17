@@ -158,9 +158,10 @@ Monthly cost at 100 custom events per active user, public prices checked on 2026
 
 Ranges: Vexo also bills the taps, screens and requests it captures; PostHog bills identified events twice. Shipstat is one small server. What you give up: session replay, heatmaps, crash reporting, remote feature flags. [Full comparison](docs/compare.md).
 
-**Switching keeps your history.** `shipstat/vexo` is a drop-in for `vexo-analytics` (change the import, put your endpoint where the key was), and one command imports your past events:
+**Switching keeps your history.** `shipstat/vexo` is a drop-in for `vexo-analytics`, a codemod makes the switch, and one command imports your past events:
 
 ```sh
+npx shipstat-dashboard migrate vexo --endpoint https://stats.example.com/events --write
 npx shipstat-dashboard import vexo --app <id> --token vexo_pat_...
 npx shipstat-dashboard import posthog --project <id> --key phx_...
 ```

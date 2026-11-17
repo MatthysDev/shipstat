@@ -224,8 +224,12 @@ Shipstat.<span class="f">track</span>(<span class="s">'purchase_done'</span>);</
     <div class="switch">
       <div>
         <h3>Coming from Vexo?</h3>
-        <p>Change one import, put your endpoint where the key was. Every Vexo call keeps working.</p>
-        <pre><code><span class="del">- import { vexo, customEvent } from 'vexo-analytics';</span>
+        <p>One command rewrites your imports and swaps the key for your endpoint. Every Vexo call keeps working.</p>
+        <pre><code><span class="c"># dry run first, then --write</span>
+npx shipstat-dashboard migrate vexo \
+  --endpoint https://stats.you.com/events
+
+<span class="del">- import { vexo, customEvent } from 'vexo-analytics';</span>
 <span class="add">+ import { vexo, customEvent } from 'shipstat/vexo';</span>
 
 <span class="del">- vexo('YOUR_VEXO_KEY');</span>

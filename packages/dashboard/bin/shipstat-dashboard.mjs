@@ -4,6 +4,7 @@
 //
 //   npx shipstat-dashboard [--port 8787] [--token secret] [--data ./shipstat-events.ndjson] [--demo]
 //   npx shipstat-dashboard import <posthog|vexo> ...   (see --help)
+//   npx shipstat-dashboard migrate vexo [dir]           (rewrites the code, dry run by default)
 import http from 'node:http';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -13,6 +14,10 @@ import zlib from 'node:zlib';
 import { demoEvents, demoWorkspace } from './demo.mjs';
 
 const args = process.argv.slice(2);
+if (args[0] === 'migrate') {
+  const { runMigrate } = await import('./migrate.mjs');
+  process.exit(runMigrate(args.slice(1)));
+}
 if (args[0] === 'import') {
   const { runImport } = await import('./import-cli.mjs');
   process.exit(await runImport(args.slice(1)));
@@ -22,7 +27,7 @@ const opt = (name, fallback) => {
   return i >= 0 && args[i + 1] ? args[i + 1] : fallback;
 };
 if (args.includes('--help') || args.includes('-h')) {
-  console.log('Usage: npx shipstat-dashboard [--port 8787] [--token <secret>] [--data <file.ndjson>] [--demo]\n\n  --demo   start with 45 days of sample events when the data file is empty\n  --workspace <file.json>   share boards, event catalog and branding with everyone who opens the dashboard\n\nImport your history:  npx shipstat-dashboard import --help');
+  console.log('Usage: npx shipstat-dashboard [--port 8787] [--token <secret>] [--data <file.ndjson>] [--demo]\n\n  --demo   start with 45 days of sample events when the data file is empty\n  --workspace <file.json>   share boards, event catalog and branding with everyone who opens the dashboard\n\nMove from Vexo:       npx shipstat-dashboard migrate vexo --help\nImport your history:  npx shipstat-dashboard import --help');
   process.exit(0);
 }
 

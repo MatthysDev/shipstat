@@ -29,6 +29,6 @@ POST <endpoint>, JSON: `{ "schema": 1, "sent_at": ISO, "events": [{ id, name, ts
 - [Performance study](https://github.com/MatthysDev/shipstat/tree/main/docs/perf)
 
 ## Migrating from Vexo or PostHog
-- Vexo: replace `from 'vexo-analytics'` with `from 'shipstat/vexo'` and pass the Shipstat endpoint URL to `vexo()` instead of the Vexo key. All Vexo calls keep working; replay/heatmap calls are no-ops. Guide: docs/migrate/vexo.md
+- Vexo: run `npx shipstat-dashboard migrate vexo --endpoint <url>` (dry run, then `--write`), or replace `from 'vexo-analytics'` with `from 'shipstat/vexo'` and pass the Shipstat endpoint URL to `vexo()` instead of the Vexo key. All Vexo calls keep working; replay/heatmap calls are no-ops. Guide: docs/migrate/vexo.md
 - PostHog: `posthog.capture` → `Shipstat.track`, `identify` → `identify`, `register` → `setContext`, `optOut` → `setEnabled(false)`. Keep PostHog for errors and flags if used. Guide: docs/migrate/posthog.md
 - History: `npx shipstat-dashboard import vexo --app <id> --token vexo_pat_...` or `npx shipstat-dashboard import posthog --project <id> --key phx_...` (add --dry-run first). Idempotent.

@@ -17,9 +17,13 @@ If you rely on session replay or heatmaps every week, stay on Vexo. If you mostl
 
 ```sh
 npx expo install shipstat
+npx shipstat-dashboard migrate vexo --endpoint https://stats.example.com/events          # shows the changes
+npx shipstat-dashboard migrate vexo --endpoint https://stats.example.com/events --write  # applies them
 ```
 
-`shipstat/vexo` exposes the same functions as `vexo-analytics`. Change the import, and put your endpoint where the Vexo key was:
+The codemod rewrites every import, `require` and test mock of `vexo-analytics` to `shipstat/vexo`, replaces the key in `vexo('…')` with your endpoint (the code around it, like an `if (!__DEV__)`, is kept), and flags what needs a human: `identifyDevice()` called with an email, replay components that now do nothing, Vexo keys left in config files. It never touches `node_modules`, `ios` or `android`.
+
+By hand, it is the same two edits:
 
 ```diff
 - import { vexo, customEvent, identifyDevice } from 'vexo-analytics';
