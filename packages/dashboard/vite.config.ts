@@ -5,5 +5,5 @@ export default defineConfig({
   plugins: [react()],
   base: './',
   optimizeDeps: { exclude: ['@duckdb/duckdb-wasm'] },
-  test: { environment: 'node', include: ['src/**/*.test.ts'] },
+  test: { environment: 'node', include: ['src/**/*.test.ts', 'test/**/*.test.mjs'] },
 } as never);

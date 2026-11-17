@@ -3,6 +3,7 @@
 // NDJSON file, serves them back, and serves the dashboard already connected in live mode.
 //
 //   npx shipstat-dashboard [--port 8787] [--token secret] [--data ./shipstat-events.ndjson] [--demo]
+//   npx shipstat-dashboard import <posthog|vexo> ...   (see --help)
 import http from 'node:http';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -12,12 +13,16 @@ import zlib from 'node:zlib';
 import { demoEvents } from './demo.mjs';
 
 const args = process.argv.slice(2);
+if (args[0] === 'import') {
+  const { runImport } = await import('./import-cli.mjs');
+  process.exit(await runImport(args.slice(1)));
+}
 const opt = (name, fallback) => {
   const i = args.indexOf(name);
   return i >= 0 && args[i + 1] ? args[i + 1] : fallback;
 };
 if (args.includes('--help') || args.includes('-h')) {
-  console.log('Usage: npx shipstat-dashboard [--port 8787] [--token <secret>] [--data <file.ndjson>] [--demo]\n\n  --demo   start with 45 days of sample events when the data file is empty');
+  console.log('Usage: npx shipstat-dashboard [--port 8787] [--token <secret>] [--data <file.ndjson>] [--demo]\n\n  --demo   start with 45 days of sample events when the data file is empty\n\nImport your history:  npx shipstat-dashboard import --help');
   process.exit(0);
 }
 
