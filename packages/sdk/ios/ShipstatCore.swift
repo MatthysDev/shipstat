@@ -15,8 +15,9 @@ final class ShipstatCore {
   static let shared = ShipstatCore()
 
   private let queue = DispatchQueue(label: "dev.shipstat.core", qos: .utility)
-  private lazy var store = EventStore()
-  private let defaults = UserDefaults(suiteName: "dev.shipstat") ?? .standard
+  private let directory: URL?
+  private lazy var store = EventStore(directory: directory)
+  private let defaults: UserDefaults
   private let session: URLSession = {
     let c = URLSessionConfiguration.ephemeral
     c.timeoutIntervalForRequest = 30
@@ -52,7 +53,10 @@ final class ShipstatCore {
   /// of track() calls becomes one SQLite transaction instead of one per event.
   private var writeBuffer: [String] = []
 
-  private init() {
+  /// The app uses `shared`; tests open their own core on a separate folder and defaults suite.
+  init(directory: URL? = nil, defaults: UserDefaults? = nil) {
+    self.directory = directory
+    self.defaults = defaults ?? UserDefaults(suiteName: "dev.shipstat") ?? .standard
     queue.async { self.loadState() }
   }
 
@@ -156,6 +160,11 @@ final class ShipstatCore {
 
   func anonymousId() -> String {
     queue.sync { anonId }
+  }
+
+  /// Events on the device that have not been sent yet.
+  func waitingCount() -> Int {
+    queue.sync { pending + writeBuffer.count }
   }
 
   /// Forces an attempt now, ignoring backoff. `done` runs when it is over.

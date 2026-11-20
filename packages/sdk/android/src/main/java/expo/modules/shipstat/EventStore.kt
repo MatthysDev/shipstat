@@ -5,8 +5,8 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 
 /** Persistent FIFO of serialized events. Only used from ShipstatCore's executor. */
-internal class EventStore(context: Context) :
-  SQLiteOpenHelper(context, "shipstat_events.db", null, 1) {
+internal class EventStore(context: Context, name: String = "shipstat_events.db") :
+  SQLiteOpenHelper(context, name, null, 1) {
 
   override fun onCreate(db: SQLiteDatabase) {
     db.execSQL("CREATE TABLE events (seq INTEGER PRIMARY KEY AUTOINCREMENT, body TEXT NOT NULL)")

@@ -57,6 +57,8 @@ Failure even if it "works":
 - Gzip by default. If the endpoint answers a gzipped batch with an error that may mean it cannot read gzip (not 401/403/408/429/502/503/504), the batch is resent once as plain JSON; if that works, the session stays plain, otherwise gzip stays on.
 - SQLite in WAL mode with `synchronous=NORMAL`: no fsync per transaction (a power cut may lose the last events, an app crash does not).
 - Offline: the queue grows to `maxQueueSize`, then the oldest events are dropped.
+- Background (Android): if events still wait when the app goes to the background, a JobScheduler job (network required, not before `flushIntervalMs`) sends them, in a fresh process if Android stopped the app, using the config saved by the last `init`. Cancelled when the app comes back or the queue empties. iOS gets about 30 s of background time to finish the send; what is left goes on the next launch.
+- Tests: `packages/sdk/test/ios` (Swift, built for the Mac) and `packages/sdk/android/src/test` (Kotlin, Robolectric) run the same scenarios against a real local HTTP server.
 - Opt-out (`setEnabled(false)`) deletes waiting events and stops tracking; persisted.
 - Targets: `track()` well under 100 µs on the JS thread (measured ≈ 1 µs), no I/O on the UI thread.
 

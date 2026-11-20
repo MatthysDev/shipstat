@@ -7,8 +7,9 @@ private let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.sel
 final class EventStore {
   private var db: OpaquePointer?
 
-  init() {
-    let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+  /// `directory` defaults to Application Support/shipstat; tests pass their own.
+  init(directory: URL? = nil) {
+    let dir = directory ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
       .appendingPathComponent("shipstat", isDirectory: true)
     try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
     var url = dir.appendingPathComponent("events.sqlite")

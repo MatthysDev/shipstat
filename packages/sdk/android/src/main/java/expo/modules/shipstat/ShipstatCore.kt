@@ -1,5 +1,8 @@
 package expo.modules.shipstat
 
+import android.app.job.JobInfo
+import android.app.job.JobScheduler
+import android.content.ComponentName
 import android.content.Context
 import android.os.Build
 import android.util.Log
@@ -31,10 +34,19 @@ internal data class ShipstatConfig(
   val compress: Boolean,
 )
 
-/** All state is touched only on [executor]. Public entry points enqueue and return. */
-internal class ShipstatCore private constructor(appContext: Context) {
+/**
+ * All state is touched only on [executor]. Public entry points enqueue and return.
+ * The app uses [get]; tests open their own core with separate preferences and database names.
+ */
+internal class ShipstatCore internal constructor(
+  private val appContext: Context,
+  prefsName: String = "dev.shipstat",
+  dbName: String = "shipstat_events.db",
+) {
   companion object {
     const val SDK_VERSION = "0.1.0"
+    /** JobScheduler ids are shared by the whole app: this one spells "SHIP". */
+    const val UPLOAD_JOB_ID = 0x53484950
 
     @Volatile private var instance: ShipstatCore? = null
     fun get(context: Context): ShipstatCore =
@@ -45,8 +57,8 @@ internal class ShipstatCore private constructor(appContext: Context) {
     Thread(r, "shipstat").apply { priority = Thread.MIN_PRIORITY; isDaemon = true }
   }
   private val network = Executors.newSingleThreadExecutor { r -> Thread(r, "shipstat-net").apply { isDaemon = true } }
-  private val prefs = appContext.getSharedPreferences("dev.shipstat", Context.MODE_PRIVATE)
-  private val store by lazy { EventStore(appContext) }
+  private val prefs = appContext.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+  private val store by lazy { EventStore(appContext, dbName) }
   private val iso = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }
 
   private var config: ShipstatConfig? = null
@@ -92,6 +104,7 @@ internal class ShipstatCore private constructor(appContext: Context) {
   /** `extra` holds the context keys only JavaScript knows (sdk_version, ota). */
   fun configure(cfg: ShipstatConfig, enabledDefault: Boolean, extra: Map<String, String>) = run {
     config = cfg
+    saveConfig(cfg)
     extra.forEach { (k, v) -> autoContext.put(k, v) }
     if (!prefs.contains("enabled") && !enabledDefault) {
       // Disabled from the start: drop what was tracked before init.
@@ -149,6 +162,7 @@ internal class ShipstatCore private constructor(appContext: Context) {
       store.clear()
       pending = 0
       cancelTimer()
+      scheduler()?.cancel(UPLOAD_JOB_ID)
     }
   }
 
@@ -160,6 +174,36 @@ internal class ShipstatCore private constructor(appContext: Context) {
   }
 
   fun anonymousId(): String = executor.submit<String> { anonId }.get()
+
+  /** Events on the device that have not been sent yet. */
+  fun waitingCount(): Int = executor.submit<Int> { pending + writeBuffer.size }.get()
+
+  /**
+   * The app went to the background: try to send now, and in case that fails or Android stops
+   * the process first, leave a job that sends once a network is up.
+   */
+  fun onBackground(done: (() -> Unit)? = null) = run {
+    scheduleUpload()
+    flush(force = false) {
+      if (pending + writeBuffer.size == 0) scheduler()?.cancel(UPLOAD_JOB_ID)
+      done?.invoke()
+    }
+  }
+
+  /** Back in the foreground: the in-app timer sends again, the job is not needed. */
+  fun onForeground() = run { scheduler()?.cancel(UPLOAD_JOB_ID) }
+
+  /**
+   * Run by [ShipstatUploadJob], possibly in a process Android started without the app's
+   * JavaScript: sends with the config saved by the last init. `done(true)` asks for a retry.
+   */
+  fun uploadInBackground(done: (Boolean) -> Unit) = run {
+    if (config == null) {
+      config = savedConfig()
+      pending = store.count()
+    }
+    flush(force = true) { done(enabled && config != null && pending + writeBuffer.size > 0) }
+  }
 
   fun flush(force: Boolean = true, done: (() -> Unit)? = null) = executor.execute {
     done?.let { flushWaiters.add(it) }
@@ -174,6 +218,61 @@ internal class ShipstatCore private constructor(appContext: Context) {
   }
 
   // Internals (executor only)
+
+  private fun scheduler(): JobScheduler? =
+    appContext.getSystemService(Context.JOB_SCHEDULER_SERVICE) as? JobScheduler
+
+  /**
+   * One job at most (scheduling again replaces it). Android runs it once a network is up,
+   * together with other apps' work, so it costs no extra wake-up.
+   */
+  private fun scheduleUpload() {
+    val cfg = config ?: return
+    if (!enabled || pending + writeBuffer.size == 0) return
+    val job = JobInfo.Builder(UPLOAD_JOB_ID, ComponentName(appContext, ShipstatUploadJob::class.java))
+      .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
+      .setMinimumLatency(cfg.flushIntervalMs)
+      .setBackoffCriteria(cfg.flushIntervalMs.coerceAtLeast(10_000L), JobInfo.BACKOFF_POLICY_EXPONENTIAL)
+      .build()
+    try {
+      scheduler()?.schedule(job)
+    } catch (e: Exception) {
+      // Missing service declaration or too many jobs: the next launch sends instead.
+      log("could not schedule the background upload: ${e.message}")
+    }
+  }
+
+  /** The job may run in a fresh process: it needs the endpoint and headers from the last init. */
+  private fun saveConfig(cfg: ShipstatConfig) {
+    val json = JSONObject()
+      .put("endpoint", cfg.endpoint)
+      .put("headers", JSONObject(cfg.headers))
+      .put("flushAt", cfg.flushAt)
+      .put("flushIntervalMs", cfg.flushIntervalMs)
+      .put("maxQueueSize", cfg.maxQueueSize)
+      .put("debug", cfg.debug)
+      .put("compress", cfg.compress)
+      .toString()
+    if (prefs.getString("config", null) != json) prefs.edit().putString("config", json).apply()
+  }
+
+  private fun savedConfig(): ShipstatConfig? = try {
+    prefs.getString("config", null)?.let { raw ->
+      val o = JSONObject(raw)
+      val h = o.getJSONObject("headers")
+      ShipstatConfig(
+        endpoint = o.getString("endpoint"),
+        headers = h.keys().asSequence().associateWith { h.getString(it) },
+        flushAt = o.getInt("flushAt"),
+        flushIntervalMs = o.getLong("flushIntervalMs"),
+        maxQueueSize = o.getInt("maxQueueSize"),
+        debug = o.getBoolean("debug"),
+        compress = o.getBoolean("compress"),
+      )
+    }
+  } catch (_: Exception) {
+    null
+  }
 
   private fun loadState() {
     anonId = prefs.getString("anonId", null) ?: UUID.randomUUID().toString().also {

@@ -52,7 +52,11 @@ class ShipstatModule : Module() {
     }
 
     OnActivityEntersBackground {
-      core.flush(force = false)
+      core.onBackground()
+    }
+
+    OnActivityEntersForeground {
+      core.onForeground()
     }
   }
 }

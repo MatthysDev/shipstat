@@ -224,6 +224,6 @@ pnpm --filter shipstat-dashboard build && node packages/dashboard/bin/shipstat-d
 
 ## Status
 
-0.1, not yet on npm. Tested on iOS simulators and Android emulators, in debug and release. Next: npm release, a Supabase receiver, a hosted demo, measurements on physical devices.
+0.1, not yet on npm. The Swift and Kotlin cores run the same test scenarios against a real HTTP server in CI; the app is tested on iOS simulators and Android emulators, in debug and release. Next: npm release, measurements on physical devices, a Supabase receiver.
 
 MIT

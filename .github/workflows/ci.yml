@@ -29,3 +29,34 @@ jobs:
           pnpm --filter shipstat-dashboard build
       - name: Site
         run: node apps/site/build.mjs
+
+  # The native cores (Swift, Kotlin) against a real local HTTP server: batches, gzip fallback,
+  # retries, opt-out, queue cap, relaunch, background upload.
+  sdk-ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: iOS core
+        run: packages/sdk/test/ios/run.sh
+
+  sdk-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v6
+      - run: pnpm install --frozen-lockfile
+      - name: Android project of the example app
+        working-directory: apps/example
+        run: npx expo prebuild --platform android --no-install
+      - name: Android core
+        working-directory: apps/example/android
+        run: ./gradlew :shipstat:testDebugUnitTest --console=plain
