@@ -1,23 +1,21 @@
 import * as duckdb from '@duckdb/duckdb-wasm';
 import { Type } from 'apache-arrow';
-import mvpWasm from '@duckdb/duckdb-wasm/dist/duckdb-mvp.wasm?url';
-import mvpWorker from '@duckdb/duckdb-wasm/dist/duckdb-browser-mvp.worker.js?url';
 import ehWasm from '@duckdb/duckdb-wasm/dist/duckdb-eh.wasm?url';
 import ehWorker from '@duckdb/duckdb-wasm/dist/duckdb-browser-eh.worker.js?url';
 
 let dbPromise: Promise<{ db: duckdb.AsyncDuckDB; conn: duckdb.AsyncDuckDBConnection }> | null = null;
 
-/** DuckDB runs in a Web Worker; bundles are served from this site, never a CDN. */
+/**
+ * DuckDB runs in a Web Worker; the bundle is served from this site, never a CDN.
+ * Only the "eh" build ships: every browser since 2022 (Chrome 95, Firefox 100, Safari 15.2)
+ * runs it, and the fallback build would add 41 MB to every install.
+ */
 export function getDb() {
   if (!dbPromise) {
     dbPromise = (async () => {
-      const bundle = await duckdb.selectBundle({
-        mvp: { mainModule: mvpWasm, mainWorker: mvpWorker },
-        eh: { mainModule: ehWasm, mainWorker: ehWorker },
-      });
-      const worker = new Worker(bundle.mainWorker!);
+      const worker = new Worker(ehWorker);
       const db = new duckdb.AsyncDuckDB(new duckdb.VoidLogger(), worker);
-      await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+      await db.instantiate(ehWasm);
       const conn = await db.connect();
       await conn.query(`
         CREATE TABLE IF NOT EXISTS events (
