@@ -172,7 +172,8 @@ export function openStore(dir, { blockSize = 10_000, retentionDays = 0, readOnly
       // A compaction rewrites the remainder of a hot file into the next one: skip the overlap.
       const lines = completeLines(fs.readFileSync(path.join(dir, h.name), 'utf8'));
       const overlap = hotBase + hotLines.length - h.base;
-      hotLines.push(...(overlap > 0 ? lines.slice(overlap) : lines));
+      // A loop, not push(...): a big first batch can leave 100 000+ lines here.
+      for (let i = Math.max(0, overlap); i < lines.length; i++) hotLines.push(lines[i]);
     }
   }
   let hotFile = path.join(dir, `hot-${hotBase}.ndjson`);

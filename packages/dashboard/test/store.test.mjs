@@ -100,6 +100,22 @@ describe('store', () => {
     expect((await readAll(again)).map((e) => e.id)).toEqual(['e0', 'e1', 'e2', 'e3']);
   });
 
+  it('recovers from a kill during the first compaction of a big batch', async () => {
+    const dir = tmp();
+    // What append() leaves on disk when killed mid-compaction: the whole batch in hot-0, its
+    // remainder already copied to hot-10000, no block indexed yet.
+    const lines = Array.from({ length: 150_000 }, (_, i) => JSON.stringify(ev(i)));
+    fs.writeFileSync(path.join(dir, 'hot-0.ndjson'), lines.join('\n') + '\n');
+    fs.writeFileSync(path.join(dir, 'hot-10000.ndjson'), lines.slice(10_000).join('\n') + '\n');
+    const store = make(dir);
+    expect(store.total).toBe(150_000);
+    await store.idle();
+    const first = await read(store, 0, 3);
+    expect(first.events.map((e) => e.id)).toEqual(['e0', 'e1', 'e2']);
+    const last = await read(store, 149_999, 5);
+    expect(last.events.map((e) => e.id)).toEqual(['e149999']);
+  });
+
   it('removes days past the retention, cursors keep working', async () => {
     const dir = tmp();
     const store = make(dir, { blockSize: 2 });
